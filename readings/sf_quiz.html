@@ -1,0 +1,577 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What Should You Read Next? · A Sci-Fi Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Fredoka:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1d1a16;
+    --paper:#fff4e4;
+    --paper2:#ffe9cf;
+    --red:#ff4438;
+    --yellow:#ffce2b;
+    --teal:#13b6c4;
+    --pink:#ff7bb0;
+    --blue:#3a6ff7;
+    --green:#2fbf71;
+    --purple:#8a5cf6;
+    --terra:#e0653a;
+    --gold:#f2a72e;
+    --sh:5px 5px 0 var(--ink);
+    --sh-sm:3px 3px 0 var(--ink);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"DM Sans",system-ui,sans-serif;
+    color:var(--ink);
+    background:var(--paper);
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(255,206,43,.5), transparent 22%),
+      radial-gradient(circle at 88% 12%, rgba(255,123,176,.45), transparent 24%),
+      radial-gradient(circle at 80% 88%, rgba(19,182,196,.4), transparent 26%),
+      radial-gradient(circle at 15% 85%, rgba(58,111,247,.32), transparent 26%);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* subtle dotted texture */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(var(--ink) .9px, transparent .9px);
+    background-size:22px 22px;opacity:.05;
+  }
+  .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:26px 18px 80px}
+  .badge{
+    display:inline-block;background:var(--ink);color:var(--yellow);
+    font-family:"Fredoka";font-weight:600;letter-spacing:.6px;text-transform:uppercase;
+    font-size:13px;padding:6px 14px;border-radius:30px;transform:rotate(-2deg);
+  }
+  h1{font-family:"Archivo Black";line-height:.96;margin:14px 0 6px;
+    font-size:clamp(38px,8.5vw,68px);letter-spacing:-1px}
+  .sub{font-size:clamp(16px,2.6vw,20px);max-width:34ch;font-weight:500}
+  .card{
+    background:#fffdf8;border:3px solid var(--ink);border-radius:18px;
+    box-shadow:var(--sh);padding:22px;
+  }
+  /* ---------- buttons ---------- */
+  .btn{
+    font-family:"Fredoka";font-weight:600;cursor:pointer;border:3px solid var(--ink);
+    border-radius:14px;box-shadow:var(--sh);background:var(--yellow);color:var(--ink);
+    padding:14px 24px;font-size:19px;transition:transform .08s ease,box-shadow .08s ease;
+    display:inline-flex;align-items:center;gap:9px;
+  }
+  .btn:hover{transform:translate(2px,2px);box-shadow:var(--sh-sm)}
+  .btn:active{transform:translate(5px,5px);box-shadow:0 0 0 var(--ink)}
+  .btn.red{background:var(--red);color:#fff}
+  .btn.teal{background:var(--teal);color:#fff}
+  .btn.ghost{background:#fffdf8}
+  /* ---------- screens ---------- */
+  .screen{display:none;animation:pop .35s cubic-bezier(.2,1.3,.5,1)}
+  .screen.active{display:block}
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+  /* ---------- intro ---------- */
+  #intro .card{background:repeating-linear-gradient(135deg,#fffdf8 0 18px,#fff8ec 18px 36px)}
+  .deco-stack{display:flex;gap:-10px;margin:18px 0 8px}
+  .mini-cover{width:54px;height:74px;border:3px solid var(--ink);border-radius:6px;
+    box-shadow:var(--sh-sm);margin-right:-14px;display:grid;place-items:center;
+    color:#fff;font-family:"Archivo Black";font-size:22px}
+  .stat-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .pill{font-family:"Fredoka";font-weight:500;font-size:13.5px;background:var(--paper2);
+    border:2.5px solid var(--ink);border-radius:30px;padding:5px 13px}
+  /* ---------- progress ---------- */
+  .progwrap{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .progtrack{flex:1;height:18px;background:#fffdf8;border:3px solid var(--ink);
+    border-radius:30px;overflow:hidden;box-shadow:var(--sh-sm)}
+  .progfill{height:100%;width:0;background:repeating-linear-gradient(45deg,var(--red) 0 12px,#ff6b61 12px 24px);
+    transition:width .4s cubic-bezier(.2,1,.3,1)}
+  .progcount{font-family:"Archivo Black";font-size:15px;white-space:nowrap}
+  /* ---------- quiz card ---------- */
+  .qhead{font-family:"Fredoka";font-weight:600;font-size:15px;text-transform:uppercase;
+    letter-spacing:.5px;color:#7a6f5e;margin-bottom:6px}
+  .booktile{display:flex;gap:18px;align-items:flex-start;margin:6px 0 18px}
+  .cover{flex:0 0 auto;width:120px;height:172px;border:3px solid var(--ink);border-radius:9px;
+    box-shadow:var(--sh);color:#fff;padding:11px;display:flex;flex-direction:column;
+    justify-content:space-between;position:relative;overflow:hidden}
+  .cover::after{content:"";position:absolute;left:13px;top:0;bottom:0;width:2px;background:rgba(0,0,0,.18)}
+  .cover .ct{font-family:"Archivo Black";font-size:15px;line-height:1.02;text-shadow:1px 1px 0 rgba(0,0,0,.25)}
+  .cover .cy{font-family:"Fredoka";font-weight:600;font-size:12px;opacity:.95}
+  .binfo h2{font-family:"Archivo Black";font-size:clamp(22px,4.4vw,30px);margin:0 0 2px;line-height:1.02}
+  .binfo .auth{font-family:"Fredoka";font-weight:600;font-size:16px;margin:0 0 8px}
+  .binfo .auth small{font-weight:500;color:#7a6f5e}
+  .binfo .blurb{font-size:15.5px;line-height:1.45;margin:0}
+  .qprompt{font-family:"Fredoka";font-weight:600;font-size:18px;margin:4px 0 12px}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .opt{font-family:"Fredoka";font-weight:600;font-size:16px;cursor:pointer;text-align:left;
+    border:3px solid var(--ink);border-radius:13px;background:#fffdf8;padding:13px 14px;
+    box-shadow:var(--sh-sm);transition:transform .07s,box-shadow .07s,background .07s;
+    display:flex;align-items:center;gap:10px}
+  .opt .em{font-size:22px}
+  .opt:hover{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+  .opt.love:hover{background:#ffe1ec}
+  .opt.like:hover{background:#fff6cf}
+  .opt.meh:hover{background:#eef4f5}
+  .opt.pass:hover{background:#f3ece2}
+  .opt.skip{grid-column:1/3;justify-content:center;background:var(--paper2);font-size:14.5px}
+  .navrow{display:flex;justify-content:space-between;margin-top:16px}
+  .lilbtn{font-family:"Fredoka";font-weight:600;background:none;border:none;cursor:pointer;
+    color:#7a6f5e;font-size:15px;text-decoration:underline;padding:6px}
+  /* ---------- results ---------- */
+  .rlabel{font-family:"Archivo Black";font-size:clamp(28px,6.2vw,46px);line-height:1;margin:6px 0 4px}
+  .rdesc{font-size:17px;font-weight:500;max-width:42ch}
+  .reco{display:flex;gap:16px;align-items:flex-start;border:3px solid var(--ink);border-radius:16px;
+    background:#fffdf8;box-shadow:var(--sh);padding:16px;margin-top:14px;position:relative}
+  .reco .rank{position:absolute;top:-15px;left:-13px;width:38px;height:38px;border-radius:50%;
+    background:var(--yellow);border:3px solid var(--ink);display:grid;place-items:center;
+    font-family:"Archivo Black";font-size:19px;box-shadow:var(--sh-sm);transform:rotate(-8deg)}
+  .reco h3{font-family:"Archivo Black";font-size:20px;margin:0 0 1px;line-height:1.05}
+  .reco .auth{font-family:"Fredoka";font-weight:600;font-size:14.5px;margin:0 0 7px;color:#5b5345}
+  .reco .why{font-size:14.5px;line-height:1.42;margin:0}
+  .reco .why b{background:var(--yellow);padding:0 4px;border-radius:4px}
+  .breakdown{margin-top:22px}
+  .bar{display:flex;align-items:center;gap:10px;margin:7px 0}
+  .bar .bl{font-family:"Fredoka";font-weight:600;font-size:14px;width:120px;text-transform:capitalize}
+  .bar .bt{flex:1;height:15px;background:#fffdf8;border:2.5px solid var(--ink);border-radius:20px;overflow:hidden}
+  .bar .bf{height:100%;background:var(--teal);border-radius:20px;width:0;transition:width .8s cubic-bezier(.2,1,.3,1)}
+  .foot{text-align:center;margin-top:26px;font-size:13px;color:#7a6f5e;max-width:46ch;margin-inline:auto}
+  /* confetti */
+  .confetti{position:fixed;top:-20px;width:11px;height:16px;z-index:5;pointer-events:none;border-radius:2px}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:.9}}
+  @media(max-width:520px){
+    .booktile{flex-direction:column;align-items:center;text-align:center}
+    .binfo{text-align:center}
+    .cover{width:128px;height:184px}
+    .opts{grid-template-columns:1fr}
+    .opt.skip{grid-column:auto}
+  }
+</style>
+
+<div class="wrap">
+
+  <!-- ============ INTRO ============ -->
+  <section id="intro" class="screen active">
+    <span class="badge">★ The Totally Scientific Quiz ★</span>
+    <h1>Which sci-fi novel should you read next?</h1>
+    <p class="sub">Rate a handful of books. We'll read your soul (well, your tags) and hand you three perfect matches from a list of 100.</p>
+    <div class="card" style="margin-top:20px">
+      <div class="deco-stack" id="deco"></div>
+      <p style="font-weight:500;margin:6px 0 2px">Rated across <b>25+ countries</b>, every era from <b>1666 to 2024</b>, and every flavor of the future.</p>
+      <div class="stat-row">
+        <span class="pill">🪐 Space opera</span>
+        <span class="pill">🌍 Afrofuturism</span>
+        <span class="pill">🤖 Cyberpunk</span>
+        <span class="pill">🌱 Climate fiction</span>
+        <span class="pill">🏳️‍🌈 Queer SF</span>
+        <span class="pill">🌀 Weird & literary</span>
+      </div>
+      <div style="margin-top:20px">
+        <button class="btn red" onclick="startQuiz()">Start the quiz →</button>
+      </div>
+    </div>
+    <p class="foot">No right answers. There are no wrong books, only books you haven't met yet.</p>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="quiz" class="screen">
+    <div class="progwrap">
+      <div class="progtrack"><div class="progfill" id="progfill"></div></div>
+      <div class="progcount" id="progcount">1 / 12</div>
+    </div>
+    <div class="card" id="qcard"><!-- injected --></div>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <section id="results" class="screen">
+    <span class="badge" style="background:var(--red);color:#fff">Your results are in!</span>
+    <div id="resultBody"></div>
+    <div style="text-align:center;margin-top:26px">
+      <button class="btn teal" onclick="restart()">↺ Take it again</button>
+    </div>
+    <p class="foot">A reading list is always partial — this one trades a few familiar names for a wider map of who has imagined the future, and where.</p>
+  </section>
+
+</div>
+
+<script>
+/* ============================================================
+   DATA — all 100 novels with region + theme tags
+   region doubles as an affinity tag. Tone tags drive the vibe.
+   ============================================================ */
+const REGION_COLOR = {
+  western:"var(--blue)", classic:"var(--blue)", afro:"var(--terra)",
+  eastasia:"var(--teal)", southasia:"var(--pink)", seasia:"var(--pink)",
+  latam:"var(--green)", caribbean:"var(--green)", mideast:"var(--gold)",
+  europe:"var(--purple)", indigenous:"var(--terra)", queer:"var(--red)"
+};
+function coverColor(b){
+  if(b.tags.includes("queer")) return "linear-gradient(135deg,#ff4438,#ff7bb0,#f2a72e)";
+  return REGION_COLOR[b.region] || "var(--ink)";
+}
+
+// b(id,title,author,year,region,blurb,[tags])
+function b(id,title,author,year,region,blurb,tags){return {id,title,author,year,region,blurb,tags};}
+const BOOKS = [
+b(1,"The Blazing World","Margaret Cavendish",1666,"western","A duchess writes utopian interplanetary travel a full century before anyone called it sci-fi.",["utopia","feminist","philosophical","lyrical","cerebral","mythic","classic","western"]),
+b(2,"Frankenstein","Mary Shelley",1818,"western","A teenager invents the genre with a creature, a creator, and the cost of playing god.",["horror","philosophical","literary","cerebral","bleak","classic","western"]),
+b(3,"Sultana's Dream","Rokeya S. Hossain",1905,"southasia","A Bengali feminist's bright, witty, gender-reversed utopia where women run the world.",["feminist","utopia","gender","hopeful","satire","lyrical","classic","southasia"]),
+b(4,"Herland","Charlotte P. Gilman",1915,"western","Three men stumble into an all-women society and have all their assumptions dismantled.",["feminist","utopia","gender","cerebral","satire","classic","western"]),
+b(5,"We","Yevgeny Zamyatin",1924,"europe","The original glass-walled dystopia that taught Orwell and Huxley how it's done.",["dystopia","bleak","cerebral","philosophical","classic","europe"]),
+b(6,"War with the Newts","Karel Čapek",1936,"europe","Biting satire about exploiting a species of clever salamanders, by the man who coined 'robot.'",["satire","dystopia","aliens","cerebral","bleak","classic","europe"]),
+b(7,"Star Maker","Olaf Stapledon",1937,"western","A lone mind tours the entire life of the cosmos. Vast, strange, unforgettable.",["philosophical","firstcontact","cerebral","lyrical","mythic","classic","western"]),
+b(8,"The Left Hand of Darkness","Ursula K. Le Guin",1969,"western","An envoy on a frozen world where everyone is both genders, none of the time.",["feminist","gender","firstcontact","philosophical","cerebral","lyrical","hopeful","queer","classic","western"]),
+b(9,"The Dispossessed","Ursula K. Le Guin",1974,"western","An 'ambiguous utopia' that weighs anarchism against capitalism without flinching.",["utopia","philosophical","cerebral","political","hopeful","classic","western"]),
+b(10,"The Female Man","Joanna Russ",1975,"western","Four versions of one woman collide in a formally explosive feminist classic.",["feminist","gender","queer","satire","cerebral","bleak","weird","classic","western"]),
+b(11,"Woman on the Edge of Time","Marge Piercy",1976,"western","A woman in a psych ward glimpses two warring futures — one liberated, one nightmarish.",["feminist","utopia","dystopia","timetravel","political","cerebral","classic","western"]),
+b(12,"Where Late the Sweet Birds Sang","Kate Wilhelm",1976,"western","After ecological collapse, a family clones its way toward an uncertain survival.",["postapoc","climate","ecological","biopunk","bleak","cerebral","classic","western"]),
+b(13,"Dreamsnake","Vonda N. McIntyre",1978,"western","A healer crosses a post-nuclear wasteland with her medicine and her serpents.",["postapoc","feminist","hopeful","action","lyrical","classic","western"]),
+b(14,"Up the Walls of the World","James Tiptree Jr.",1978,"western","First contact from the writer who blew apart everyone's idea of who wrote SF.",["firstcontact","aliens","cerebral","classic","western"]),
+b(15,"Downbelow Station","C.J. Cherryh",1981,"western","Dense, political space-station opera where every faction has a knife out.",["spaceopera","political","action","cerebral","western"]),
+b(16,"The Handmaid's Tale","Margaret Atwood",1985,"western","A theocracy seizes women's bodies in this chillingly plausible dystopia.",["dystopia","feminist","gender","bleak","literary","political","western"]),
+b(17,"Grass","Sheri S. Tepper",1989,"western","On a planet of endless prairie, an aristocratic hunt hides an ecological terror.",["ecological","firstcontact","aliens","philosophical","cerebral","western"]),
+b(18,"Doomsday Book","Connie Willis",1992,"western","A time-traveling historian lands in the wrong century — twin plagues, 700 years apart.",["timetravel","pandemic","literary","bleak","cerebral","western"]),
+b(19,"A Wrinkle in Time","Madeleine L'Engle",1962,"western","A girl folds space and time to rescue her father from cosmic dark.",["mythic","hopeful","action","philosophical","ya","classic","western"]),
+b(20,"The Memoirs of a Survivor","Doris Lessing",1974,"western","Society quietly unravels outside the window while strange rooms open in the wall.",["postapoc","literary","bleak","lyrical","cerebral","classic","western"]),
+b(21,"Babel-17","Samuel R. Delany",1966,"afro","A poet decodes a language that's also a weapon, in a queer Black pioneer's breakout.",["spaceopera","queer","afrofuturism","philosophical","cerebral","action","classic","afro"]),
+b(22,"Kindred","Octavia E. Butler",1979,"afro","A Black woman is yanked back in time to an antebellum plantation, again and again.",["timetravel","afrofuturism","literary","bleak","war","classic","afro"]),
+b(23,"Parable of the Sower","Octavia E. Butler",1993,"afro","Eerily prescient climate collapse, and one girl building a faith to survive it.",["climate","postapoc","afrofuturism","dystopia","bleak","hopeful","afro"]),
+b(24,"Midnight Robber","Nalo Hopkinson",2000,"caribbean","Caribbean carnival folklore fused with a banished girl's interstellar coming-of-age.",["afrofuturism","mythic","spaceopera","lyrical","action","caribbean"]),
+b(25,"Who Fears Death","Nnedi Okorafor",2010,"afro","In a post-apocalyptic Sudan, a girl born of violence carries world-changing magic.",["africa","afrofuturism","postapoc","mythic","war","bleak","action","afro"]),
+b(26,"Lagoon","Nnedi Okorafor",2014,"afro","Aliens land off the coast of Lagos, and the whole city talks back.",["africa","firstcontact","afrofuturism","aliens","action","hopeful","afro"]),
+b(27,"The Fifth Season","N.K. Jemisin",2015,"afro","A world that ends on a schedule, told through the people it tries to crush.",["afrofuturism","postapoc","ecological","oppression","epic","bleak","action","mythic","afro"]),
+b(28,"Rosewater","Tade Thompson",2016,"afro","A psychic and an alien biodome share a tense near-future Nigeria.",["africa","firstcontact","biopunk","aliens","cerebral","action","afro"]),
+b(29,"An Unkindness of Ghosts","Rivers Solomon",2017,"afro","A generation ship runs on the cruelties of the antebellum South.",["afrofuturism","spaceopera","queer","oppression","bleak","literary","afro"]),
+b(30,"The Old Drift","Namwali Serpell",2019,"afro","Three Zambian families, a century of history, and a swarm of the future.",["africa","literary","epic","lyrical","philosophical","afro"]),
+b(31,"Riot Baby","Tochi Onyebuchi",2020,"afro","Rage, prophecy, and American racism, in a slim book that detonates.",["afrofuturism","dystopia","bleak","literary","political","afro"]),
+b(32,"A Master of Djinn","P. Djèlí Clark",2021,"mideast","An agent hunts an impostor in a steampunk Cairo crackling with magic and djinn.",["mythic","action","mystery","cozy","mideast"]),
+b(33,"Inter Ice Age 4","Kōbō Abe",1959,"eastasia","Often called Japan's first true SF novel — a drowning world and a machine that predicts you.",["eastasia","climate","cerebral","bleak","philosophical","classic"]),
+b(34,"Japan Sinks","Sakyō Komatsu",1973,"eastasia","The islands are going under, and there's nowhere left to put a nation.",["eastasia","ecological","bleak","action","classic"]),
+b(35,"Paprika","Yasutaka Tsutsui",1993,"eastasia","A therapist enters dreams to heal — until the dreams start leaking out.",["eastasia","cyberpunk","weird","action","cerebral"]),
+b(36,"The Memory Police","Yōko Ogawa",1994,"eastasia","On an island, things vanish — objects, then memories, then people. Quiet and devastating.",["eastasia","dystopia","literary","bleak","quiet","lyrical","cerebral"]),
+b(37,"All You Need Is Kill","Hiroshi Sakurazaka",2004,"eastasia","A soldier dies in an alien war and wakes up to fight the same day — forever.",["eastasia","timetravel","action","war","military","aliens"]),
+b(38,"The Three-Body Problem","Liu Cixin",2008,"eastasia","A first-contact epic of physics and despair that broke Chinese SF into the West.",["eastasia","hard","firstcontact","epic","cerebral","aliens"]),
+b(39,"Harmony","Project Itoh",2008,"eastasia","A wellness utopia where being unhealthy is the last forbidden act.",["eastasia","dystopia","cerebral","biopunk","bleak"]),
+b(40,"Waste Tide","Chen Qiufan",2013,"eastasia","Class war and biotech ignite on an island where the world dumps its e-waste.",["eastasia","cyberpunk","biopunk","climate","action","political"]),
+b(41,"Vagabonds","Hao Jingfang",2016,"eastasia","Mars-raised teens return to Earth and can't belong to either world.",["eastasia","philosophical","political","cerebral","spaceopera"]),
+b(42,"Terminal Boredom","Izumi Suzuki",2021,"eastasia","Counterculture feminist SF, glittering and bleak, finally in English.",["eastasia","feminist","weird","queer","satire","cerebral","bleak"]),
+b(43,"Tower","Bae Myung-hoon",2009,"eastasia","Sly, linked satire set inside a single 674-floor skyscraper that is its own country.",["eastasia","satire","cerebral","cozy"]),
+b(44,"I'm Waiting for You","Kim Bo-Young",2021,"eastasia","Two lovers try to sync their arrival through relativity, and keep missing by years.",["eastasia","timetravel","lyrical","hopeful","philosophical"]),
+b(45,"Counterweight","Djuna",2023,"eastasia","Corporate knives come out around a space elevator in a slick Korean thriller.",["eastasia","cyberpunk","corporate","action","cerebral"]),
+b(46,"Escape","Manjula Padmanabhan",2008,"southasia","In a land that has erased its women, a girl is smuggled toward freedom.",["southasia","dystopia","gender","feminist","bleak","action"]),
+b(47,"Leila","Prayaag Akbar",2017,"southasia","A mother searches a walled, purity-obsessed near-future for her stolen daughter.",["southasia","dystopia","literary","bleak","political"]),
+b(48,"Ambiguity Machines","Vandana Singh",2018,"southasia","A physicist's lyrical, mind-stretching stories about strange machines and stranger physics.",["southasia","philosophical","lyrical","cerebral","hard"]),
+b(49,"The Gurkha and the Lord of Tuesday","Saad Z. Hossain",2019,"southasia","A freed djinn meets an AI running a climate-ruined Kathmandu. Hijinks ensue.",["southasia","mythic","climate","ai","satire","action","cozy"]),
+b(50,"The City Inside","Samit Basu",2020,"southasia","Influencers and total surveillance in a sweaty, sharp near-future Delhi.",["southasia","cyberpunk","dystopia","political","cerebral"]),
+b(51,"Machinehood","S.B. Divya",2021,"southasia","In a gig economy of human-machine labor, robots demand rights — violently.",["southasia","cyberpunk","ai","action","political"]),
+b(52,"The Saint of Bright Doors","Vajra Chandrasekera",2023,"southasia","A man raised to assassinate his father drifts through a city of impossible doors.",["southasia","weird","mythic","literary","lyrical","philosophical"]),
+b(53,"Bangkok Wakes to Rain","Pitchaya Sudbanthad",2019,"seasia","A drowning city told across centuries — past lives, future floods, one haunted house.",["seasia","climate","literary","lyrical","ecological","philosophical"]),
+b(54,"The Invention of Morel","Adolfo Bioy Casares",1940,"latam","A fugitive on an island falls for a woman who may only be a projection. Pure VR before its time.",["latam","cyberpunk","cerebral","philosophical","weird","lyrical","classic"]),
+b(55,"Ficciones","Jorge Luis Borges",1944,"latam","Labyrinths, infinite libraries, and impossible maps — the blueprint for speculative fiction.",["latam","philosophical","weird","cerebral","literary","mythic","classic"]),
+b(56,"Kalpa Imperial","Angélica Gorodischer",1983,"latam","The rise and fall of a mythic empire, narrated like a fireside legend (translated by Le Guin).",["latam","mythic","lyrical","philosophical","literary"]),
+b(57,"A Planet for Rent","Yoss",2001,"latam","Alien tourists run a ruined Earth; everyone hustles to escape. Sharp Cuban allegory.",["latam","satire","aliens","political","dystopia","bleak"]),
+b(58,"Turing's Delirium","Edmundo Paz Soldán",2003,"latam","Codebreakers and hacktivists collide in a Bolivia of cryptography and unrest.",["latam","cyberpunk","political","cerebral"]),
+b(59,"The Best of All Possible Worlds","Karen Lord",2013,"caribbean","After his world dies, a refugee and a local official tour the planet — and slowly fall.",["caribbean","firstcontact","philosophical","hopeful","cozy","aliens"]),
+b(60,"Fever Dream","Samanta Schweblin",2014,"latam","A dying woman and a strange boy unspool an ecological horror in feverish whispers.",["latam","ecological","horror","weird","bleak","literary","lyrical"]),
+b(61,"Tentacle","Rita Indiana",2015,"caribbean","Queer, Afro-Caribbean time travel toward a reef the future is desperate to save.",["caribbean","queer","climate","timetravel","weird","bleak","afrofuturism"]),
+b(62,"Tender Is the Flesh","Agustina Bazterrica",2017,"latam","Humans are now livestock. A brutal, immaculate dystopia you can't unread.",["latam","dystopia","horror","bleak","satire"]),
+b(63,"Utopia","Ahmed Khaled Towfik",2008,"mideast","The rich wall themselves off; the poor seethe outside. A class-war thriller in future Egypt.",["mideast","dystopia","bleak","action","political"]),
+b(64,"Frankenstein in Baghdad","Ahmed Saadawi",2013,"mideast","A creature stitched from bombing victims roams occupied Baghdad, hunting its makers.",["mideast","horror","war","literary","bleak","satire"]),
+b(65,"The Queue","Basma Abdel Aziz",2013,"mideast","After an uprising, a single endless line becomes the government. Kafka in the desert.",["mideast","dystopia","satire","bleak","political","literary"]),
+b(66,"Otared","Mohammad Rabie",2014,"mideast","A former cop turns sniper in a violently occupied near-future Cairo.",["mideast","dystopia","war","bleak","action","literary"]),
+b(67,"Iraq + 100","ed. Hassan Blasim",2016,"mideast","Iraqi writers imagine their country in 2103. Strange, furious, hopeful by turns.",["mideast","firstcontact","political","anthology"]),
+b(68,"Palestine + 100","ed. Basma Ghalayini",2019,"mideast","Palestinian writers picture life a century after the Nakba.",["mideast","dystopia","political","anthology"]),
+b(69,"Walking the Clouds","ed. Grace L. Dillon",2012,"indigenous","The anthology that named 'Indigenous futurisms' and mapped a whole field.",["indigenous","mythic","anthology"]),
+b(70,"The Marrow Thieves","Cherie Dimaline",2017,"indigenous","In a world that lost the ability to dream, Indigenous people are hunted for their marrow.",["indigenous","dystopia","postapoc","ya","bleak","hopeful","action"]),
+b(71,"Future Home of the Living God","Louise Erdrich",2017,"indigenous","Evolution runs backward and the state seizes pregnant women. A mother goes underground.",["indigenous","dystopia","climate","literary","bleak","gender"]),
+b(72,"Moon of the Crusted Snow","Waubgeshig Rice",2018,"indigenous","When the grid dies, a northern Anishinaabe community must remember how to survive winter.",["indigenous","postapoc","bleak","quiet","ecological"]),
+b(73,"Trail of Lightning","Rebecca Roanhorse",2018,"indigenous","A monster-hunter stalks a flooded, reborn Diné homeland with a god on her trail.",["indigenous","postapoc","mythic","action","climate","queer"]),
+b(74,"A Snake Falls to Earth","Darcie Little Badger",2021,"indigenous","Two worlds — ours and the spirits' — brush together in warm Lipan Apache storytelling.",["indigenous","mythic","ya","ecological","lyrical","hopeful"]),
+b(75,"The Long Way to a Small, Angry Planet","Becky Chambers",2014,"queer","A scruffy crew, a galaxy of kindness, and the coziest space opera there is.",["queer","spaceopera","cozy","hopeful","action","western"]),
+b(76,"All the Birds in the Sky","Charlie Jane Anders",2016,"queer","A witch and an engineer must decide whether magic or tech gets to save the world.",["queer","climate","weird","mythic","hopeful","literary","western"]),
+b(77,"Ninefox Gambit","Yoon Ha Lee",2016,"queer","Math is the empire's weapon, and a disgraced captain shares her skull with a dead madman.",["queer","military","spaceopera","hard","action","cerebral","bleak"]),
+b(78,"Autonomous","Annalee Newitz",2017,"queer","A drug pirate and a soldier-bot wrestle with patents, freedom, and what gender even is.",["queer","biopunk","ai","cyberpunk","action","political","cerebral"]),
+b(79,"The Tea Master and the Detective","Aliette de Bodard",2018,"queer","A traumatized sentient ship and a brilliant sleuth crack a case in a Vietnamese-coded galaxy.",["queer","spaceopera","seasia","cozy","mystery","lyrical"]),
+b(80,"Gideon the Ninth","Tamsyn Muir",2019,"queer","Lesbian necromancers, a haunted palace, and the funniest sword in space.",["queer","horror","weird","action","spaceopera","mythic"]),
+b(81,"A Memory Called Empire","Arkady Martine",2019,"queer","An ambassador carries a dead predecessor in her head into a seductive, deadly empire.",["queer","spaceopera","political","identity","cerebral","action"]),
+b(82,"The Seep","Chana Porter",2020,"queer","A gentle alien takeover, seen through a trans woman grieving the world that was.",["queer","firstcontact","literary","quiet","lyrical","hopeful","bleak"]),
+b(83,"The Echo Wife","Sarah Gailey",2021,"queer","A scientist discovers her husband cloned her — into a more agreeable wife.",["queer","biopunk","literary","bleak","cerebral","thriller"]),
+b(84,"Light from Uncommon Stars","Ryka Aoki",2021,"queer","A demon's deal, a refugee starship, and a trans runaway with a violin and a future.",["queer","mythic","cozy","hopeful","spaceopera","lyrical"]),
+b(85,"Solaris","Stanisław Lem",1961,"europe","An ocean-planet that thinks, and humans who can't begin to understand it.",["europe","firstcontact","cerebral","philosophical","bleak","weird","aliens","classic"]),
+b(86,"Roadside Picnic","Arkady & Boris Strugatsky",1972,"europe","Aliens visited, left their litter, and humans risk death to scavenge the impossible.",["europe","firstcontact","weird","bleak","aliens","philosophical","classic"]),
+b(87,"The Slynx","Tatyana Tolstaya",2000,"europe","Two centuries after the Blast, a clerk copies old books in a mutated, frozen Moscow.",["europe","postapoc","satire","bleak","literary","weird"]),
+b(88,"The Possibility of an Island","Michel Houellebecq",2005,"europe","A comedian's clones narrate the slow, cold end of the human race.",["europe","biopunk","bleak","philosophical","literary"]),
+b(89,"Day of the Oprichnik","Vladimir Sorokin",2006,"europe","One brutal day in a neo-medieval future Russia of czars, floggings, and gas pipelines.",["europe","dystopia","satire","bleak","literary","political"]),
+b(90,"Vita Nostra","Marina & Sergey Dyachenko",2007,"europe","A girl is press-ganged into a sinister academy where failing exams unmakes reality.",["europe","academy","weird","philosophical","bleak","lyrical","mythic"]),
+b(91,"The Core of the Sun","Johanna Sinisalo",2013,"europe","A eugenic gender dystopia where the only rebellion left is a forbidden chili pepper.",["europe","dystopia","gender","feminist","satire","weird","bleak"]),
+b(92,"The Old Axolotl","Jacek Dukaj",2015,"europe","Humanity dies in an instant; the survivors live on only as software in machines.",["europe","postapoc","ai","philosophical","cerebral","bleak"]),
+b(93,"The Employees","Olga Ravn",2018,"europe","A starship crew files eerie HR statements about objects that make them feel too much.",["europe","spaceopera","literary","weird","lyrical","cerebral","quiet"]),
+b(94,"Never Let Me Go","Kazuo Ishiguro",2005,"western","Three friends at a strange English school slowly learn what they were made for.",["western","biopunk","literary","bleak","quiet","lyrical"]),
+b(95,"Station Eleven","Emily St. John Mandel",2014,"western","A traveling Shakespeare troupe keeps art alive in the years after a flu ends the world.",["western","pandemic","postapoc","literary","hopeful","lyrical"]),
+b(96,"Severance","Ling Ma",2018,"eastasia","An office drone keeps showing up to work as a nostalgia-plague empties New York.",["eastasia","pandemic","postapoc","satire","literary","bleak"]),
+b(97,"The Tiger Flu","Larissa Lai",2018,"eastasia","After a plague kills the men, two women fight for a future in a broken, queer world.",["eastasia","queer","pandemic","postapoc","feminist","bleak","action"]),
+b(98,"Exhalation","Ted Chiang",2019,"eastasia","Precise, profound stories that find the soul inside a thought experiment.",["eastasia","philosophical","hard","cerebral","lyrical","hopeful"]),
+b(99,"How High We Go in the Dark","Sequoia Nagamatsu",2022,"eastasia","Linked stories trace a thawed-out plague — and the strange, tender ways people grieve.",["eastasia","pandemic","literary","bleak","lyrical","philosophical"]),
+b(100,"The Ministry of Time","Kaliane Bradley",2024,"western","A civil servant babysits a time-displaced Victorian explorer — and falls for him.",["western","timetravel","literary","romance","action","political"]),
+];
+
+/* Anchor pool for the quiz, bucketed to guarantee a diverse rating set */
+const BUCKETS = {
+  classic:[8,5,85],
+  afro:[22,23,27],
+  eastasia:[38,36,98],
+  south_se:[50,52,53],
+  latam_carib:[62,59,55],
+  mideast:[64,65],
+  indigenous:[70,73],
+  queer:[75,80,81],
+  europe:[90,86],
+  contemporary:[95,94,100]
+};
+
+/* friendly names for tags when shown to the user */
+const TAG_LABEL = {
+  spaceopera:"space opera", firstcontact:"first contact", afrofuturism:"Afrofuturism",
+  postapoc:"post-apocalyptic", biopunk:"biopunk", cyberpunk:"cyberpunk", timetravel:"time travel",
+  hard:"hard SF", ya:"YA adventure", eastasia:"East Asian SF", southasia:"South Asian SF",
+  seasia:"Southeast Asian SF", latam:"Latin American SF", caribbean:"Caribbean SF",
+  mideast:"Arabic SF", indigenous:"Indigenous futurism", europe:"European SF", western:"Western SF",
+  afro:"Afrofuturism"
+};
+function pretty(t){ return TAG_LABEL[t] || t; }
+/* tags we don't surface as a "theme" in the breakdown / reasoning */
+const META_TAGS = new Set(["classic","ya","anthology","western","afro"]);
+
+/* ============================================================
+   QUIZ STATE
+   ============================================================ */
+const REACTIONS = {
+  love:{w:2.2, em:"😍", label:"Yes please!"},
+  like:{w:1.0, em:"🙂", label:"Sure, I'd try it"},
+  meh: {w:-0.4, em:"😐", label:"Eh, maybe"},
+  pass:{w:-1.6, em:"🙅", label:"Hard pass"},
+  skip:{w:0,   em:"🤷", label:"Skip — never heard of it"}
+};
+let quizBooks = [];
+let answers = []; // {id, reaction}
+let idx = 0;
+
+function byId(id){ return BOOKS.find(x=>x.id===id); }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function buildQuizSet(){
+  const picked = [];
+  // one per bucket
+  for(const k in BUCKETS){ const opts=shuffle(BUCKETS[k]); picked.push(opts[0]); }
+  // fill to 12 with leftover anchors
+  const all = [].concat(...Object.values(BUCKETS));
+  const leftover = shuffle(all.filter(id=>!picked.includes(id)));
+  while(picked.length<12 && leftover.length){ picked.push(leftover.pop()); }
+  return shuffle(picked).slice(0,12).map(byId);
+}
+
+/* ---------- intro deco covers ---------- */
+function renderDeco(){
+  const sample=[27,38,75,8,62];
+  document.getElementById('deco').innerHTML = sample.map(id=>{
+    const bk=byId(id);
+    return `<div class="mini-cover" style="background:${coverColor(bk)}">${bk.title[0]}</div>`;
+  }).join('');
+}
+renderDeco();
+
+/* ---------- flow ---------- */
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
+
+function startQuiz(){
+  quizBooks = buildQuizSet();
+  answers = [];
+  idx = 0;
+  show('quiz');
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const bk = quizBooks[idx];
+  const total = quizBooks.length;
+  document.getElementById('progfill').style.width = ((idx)/total*100)+'%';
+  document.getElementById('progcount').textContent = (idx+1)+' / '+total;
+  const prev = answers[idx];
+  document.getElementById('qcard').innerHTML = `
+    <div class="qhead">Book ${idx+1} of ${total} · how do you feel about…</div>
+    <div class="booktile">
+      <div class="cover" style="background:${coverColor(bk)}">
+        <div class="ct">${bk.title}</div>
+        <div class="cy">${bk.author} · ${bk.year}</div>
+      </div>
+      <div class="binfo">
+        <h2>${bk.title}</h2>
+        <p class="auth">${bk.author} <small>· ${bk.year}</small></p>
+        <p class="blurb">${bk.blurb}</p>
+      </div>
+    </div>
+    <div class="qprompt">Would you read it?</div>
+    <div class="opts">
+      ${['love','like','meh','pass'].map(r=>optBtn(r,prev)).join('')}
+      ${optBtn('skip',prev)}
+    </div>
+    <div class="navrow">
+      <button class="lilbtn" ${idx===0?'style="visibility:hidden"':''} onclick="goBack()">← Back</button>
+      <span class="lilbtn" style="cursor:default;text-decoration:none">${answers.filter(Boolean).length} rated</span>
+    </div>`;
+}
+function optBtn(r,prev){
+  const R=REACTIONS[r];
+  const sel = prev && prev.reaction===r;
+  return `<button class="opt ${r}" style="${sel?'background:var(--yellow);transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)':''}" onclick="answer('${r}')">
+    <span class="em">${R.em}</span><span>${R.label}</span></button>`;
+}
+function answer(r){
+  answers[idx] = {id:quizBooks[idx].id, reaction:r};
+  if(idx < quizBooks.length-1){ idx++; renderQuestion(); }
+  else { finish(); }
+}
+function goBack(){ if(idx>0){ idx--; renderQuestion(); } }
+
+/* ============================================================
+   RECOMMENDER
+   ============================================================ */
+function computeProfile(){
+  const profile = {};
+  answers.forEach(a=>{
+    if(!a) return;
+    const w = REACTIONS[a.reaction].w;
+    if(w===0) return;
+    byId(a.id).tags.forEach(t=>{ profile[t]=(profile[t]||0)+w; });
+  });
+  return profile;
+}
+function recommend(profile){
+  const ratedIds = new Set(answers.filter(Boolean).map(a=>a.id));
+  const scored = BOOKS.filter(bk=>!ratedIds.has(bk.id)).map(bk=>{
+    let s=0; bk.tags.forEach(t=>{ s += (profile[t]||0); });
+    s = s / Math.sqrt(bk.tags.length);    // mild normalization
+    s += (Math.random()-0.5)*0.12;        // gentle tiebreak jitter
+    return {bk, score:s};
+  });
+  scored.sort((a,b)=>b.score-a.score);
+  // need positive signal; if too flat, fall back to a diverse default
+  const positives = Object.values(profile).some(v=>v>0);
+  if(!positives){
+    const fallback=[27,75,38,98,8,62].map(byId);
+    return shuffle(fallback).slice(0,3).map(bk=>({bk,score:0}));
+  }
+  return scored.slice(0,3);
+}
+function topLikedBooks(){
+  return answers.filter(a=>a && REACTIONS[a.reaction].w>0)
+    .sort((a,b)=>REACTIONS[b.reaction].w-REACTIONS[a.reaction].w)
+    .map(a=>byId(a.id));
+}
+function reasonFor(bk, liked){
+  // find liked books sharing the most non-meta tags
+  let best=null, bestShared=[];
+  liked.forEach(lk=>{
+    const shared = bk.tags.filter(t=>lk.tags.includes(t) && !META_TAGS.has(t));
+    if(shared.length>bestShared.length){ best=lk; bestShared=shared; }
+  });
+  if(best && bestShared.length){
+    const themes = bestShared.slice(0,2).map(t=>`<b>${pretty(t)}</b>`).join(' & ');
+    return `Because you lit up for <b>${best.title}</b> — this shares its ${themes}.`;
+  }
+  // otherwise reason from the book's own strongest themes
+  const themes = bk.tags.filter(t=>!META_TAGS.has(t)).slice(0,2).map(t=>pretty(t));
+  return `A wildcard your taste pointed at — strong on ${themes.join(' and ')}.`;
+}
+
+/* personality label from dominant positive tags */
+const PERSONAS = [
+  {need:["cozy"], name:"The Cosmic Comfort-Seeker", desc:"You want a found family, a warm ship, and a galaxy that's basically kind. Tea included."},
+  {need:["bleak","dystopia"], name:"The Beautiful Doomer", desc:"Hand you a gorgeous nightmare and you'll thank the author. The darker the mirror, the better."},
+  {need:["cerebral","philosophical"], name:"The Big-Brain Cosmonaut", desc:"You read SF to be out-thought. Bring on the unknowable aliens and the ideas that hurt a little."},
+  {need:["afrofuturism"], name:"The Afrofuturist", desc:"Power, prophecy, and worlds remade from the margins. You like your futures with history in them."},
+  {need:["queer"], name:"The Queer Stargazer", desc:"You want futures with room in them — identity, desire, and chosen family among the stars."},
+  {need:["eastasia"], name:"The Quiet Futurist", desc:"Drawn to the precise, the eerie, the East Asian SF that gets under your skin and stays."},
+  {need:["climate","ecological"], name:"The Climate Oracle", desc:"You read the weather of tomorrow. Drowning cities, scorched earth, and people who endure."},
+  {need:["weird","literary"], name:"The Slipstream Wanderer", desc:"Genre lines bore you. You want the strange, the lyrical, the books that refuse a shelf."},
+  {need:["spaceopera","action"], name:"The Space Opera Romantic", desc:"Big ships, bigger stakes, empires and intrigue. You're here for the sweep of it all."},
+  {need:["feminist","gender"], name:"The Future-Feminist", desc:"You like SF that takes gender apart and builds something braver. Utopias and reckonings both."},
+];
+function personaFor(profile){
+  let best=PERSONAS[0], bestScore=-1e9;
+  PERSONAS.forEach(p=>{
+    const s = p.need.reduce((acc,t)=>acc+(profile[t]||0),0)/p.need.length;
+    if(s>bestScore){ bestScore=s; best=p; }
+  });
+  return best;
+}
+function topThemes(profile){
+  return Object.entries(profile)
+    .filter(([t,v])=>v>0 && !META_TAGS.has(t))
+    .sort((a,b)=>b[1]-a[1]).slice(0,5);
+}
+
+/* ---------- finish & render results ---------- */
+function finish(){
+  document.getElementById('progfill').style.width='100%';
+  const profile = computeProfile();
+  const recos = recommend(profile);
+  const liked = topLikedBooks();
+  const persona = personaFor(profile);
+  const themes = topThemes(profile);
+  const maxV = themes.length?themes[0][1]:1;
+
+  const recoHTML = recos.map((r,i)=>{
+    const bk=r.bk;
+    return `<div class="reco">
+      <div class="rank">${i+1}</div>
+      <div class="cover" style="width:84px;height:120px;flex:0 0 auto;background:${coverColor(bk)}">
+        <div class="ct" style="font-size:12px">${bk.title}</div>
+        <div class="cy" style="font-size:10px">${bk.year}</div>
+      </div>
+      <div>
+        <h3>${bk.title}</h3>
+        <p class="auth">${bk.author} · ${bk.year} · ${bk.region==='western'?'UK/US':pretty(bk.region)}</p>
+        <p class="why">${reasonFor(bk, liked)}</p>
+      </div>
+    </div>`;
+  }).join('');
+
+  const barsHTML = themes.length ? `
+    <div class="breakdown">
+      <div class="qhead">Your taste, decoded</div>
+      ${themes.map(([t,v])=>`
+        <div class="bar">
+          <span class="bl">${pretty(t)}</span>
+          <span class="bt"><span class="bf" data-w="${Math.max(14,Math.round(v/maxV*100))}"></span></span>
+        </div>`).join('')}
+    </div>` : '';
+
+  document.getElementById('resultBody').innerHTML = `
+    <h2 class="rlabel">You're ${persona.name}.</h2>
+    <p class="rdesc">${persona.desc}</p>
+    <div style="margin-top:8px" class="qhead">Read these three next →</div>
+    ${recoHTML}
+    ${barsHTML}`;
+
+  show('results');
+  setTimeout(()=>{ document.querySelectorAll('.bf').forEach(el=>el.style.width=el.dataset.w+'%'); }, 120);
+  confetti();
+}
+
+function restart(){ show('intro'); }
+
+/* ---------- confetti ---------- */
+function confetti(){
+  const colors=['var(--red)','var(--yellow)','var(--teal)','var(--pink)','var(--blue)','var(--green)'];
+  for(let i=0;i<70;i++){
+    const c=document.createElement('div');
+    c.className='confetti';
+    c.style.left=Math.random()*100+'vw';
+    c.style.background=colors[i%colors.length];
+    c.style.transform=`rotate(${Math.random()*360}deg)`;
+    const dur=2.4+Math.random()*1.8, delay=Math.random()*0.6;
+    c.style.animation=`fall ${dur}s ${delay}s ease-in forwards`;
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),(dur+delay)*1000+200);
+  }
+}
+</script>
