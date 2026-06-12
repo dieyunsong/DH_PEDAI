@@ -172,6 +172,13 @@
     .results-intro { margin-bottom: var(--space-lg); }
     .calendar-wrap { overflow-x: auto; padding-bottom: var(--space-sm); }
     .calendar { display: grid; grid-template-columns: repeat(12, minmax(130px, 1fr)); gap: var(--space-xs); min-width: 1200px; }
+
+    @media (max-width: 700px) {
+      .player-grid { grid-template-columns: 1fr 1fr; }
+      h1 { font-size: 32px; }
+      .hero { padding: var(--space-md) var(--space-sm); }
+    }
+
     .cal-month-label {
       font-family: var(--font-sans); font-size: 9px; letter-spacing: 4px;
       text-transform: uppercase; color: var(--color-sage);
