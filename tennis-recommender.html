@@ -545,6 +545,237 @@
                   + computePrestigeBonus(t.prestige)
       })).sort((a, b) => b.matchScore - a.matchScore);
     }
+
+// ── SCREEN 1: CATEGORY PICKER ──
+
+function renderCategoryPicker() {
+  const grid = document.getElementById('category-grid');
+  grid.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const tile = document.createElement('div');
+    tile.className = 'category-tile' + (selectedCategories.includes(cat.id) ? ' selected' : '');
+    tile.dataset.id = cat.id;
+    tile.innerHTML = `
+      <div class="tile-icon">${cat.icon}</div>
+      <div class="tile-name">${cat.name}</div>
+      <div class="tile-desc">${cat.desc}</div>
+    `;
+    tile.addEventListener('click', () => toggleCategory(cat.id));
+    grid.appendChild(tile);
+  });
+  updateStartButton();
+}
+
+function toggleCategory(id) {
+  if (selectedCategories.includes(id)) {
+    if (selectedCategories.length > 2) selectedCategories = selectedCategories.filter(c => c !== id);
+  } else {
+    if (selectedCategories.length < 5) selectedCategories.push(id);
+  }
+  renderCategoryPicker();
+}
+
+function updateStartButton() {
+  const btn = document.getElementById('btn-start-quiz');
+  const count = selectedCategories.length;
+  btn.disabled = count < 2;
+  btn.textContent = count >= 2 ? `Start Quiz (${count} selected) →` : 'Select at least 2';
+}
+
+document.getElementById('btn-start-quiz').addEventListener('click', () => {
+  buildQuestionList();
+  showScreen('screen-quiz');
+  renderQuestion(0);
+});
+
+// ── SCREEN 2: QUIZ ──
+
+function buildQuestionList() {
+  allQuestions = [];
+  userVector = {};
+  answeredIndices = new Set();
+  currentQuestionIndex = 0;
+  Object.keys(chosenAnswers).forEach(k => delete chosenAnswers[k]);
+  selectedCategories.forEach(dim => {
+    QUIZ_QUESTIONS[dim].forEach(q => {
+      allQuestions.push({ dimension: dim, ...q });
+    });
+  });
+}
+
+const chosenAnswers = {};
+
+function renderQuestion(index) {
+  currentQuestionIndex = index;
+  const q = allQuestions[index];
+  const total = allQuestions.length;
+  const cat = CATEGORIES.find(c => c.id === q.dimension);
+
+  document.getElementById('progress-bar').style.width = `${(index / total) * 100}%`;
+  document.getElementById('quiz-dim-label').textContent = cat ? cat.name : q.dimension;
+  document.getElementById('quiz-question-text').textContent = q.question;
+  document.getElementById('quiz-counter').textContent = `Question ${index + 1} of ${total}`;
+
+  const grid = document.getElementById('player-grid');
+  grid.innerHTML = '';
+  q.options.forEach(name => {
+    const player = playerByName(name);
+    if (!player) return;
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0, 3);
+    const card = document.createElement('div');
+    card.className = 'player-card' + (chosenAnswers[index] === name ? ' selected' : '');
+    card.innerHTML = `
+      <div class="player-avatar">${initials}</div>
+      <div class="player-name">${name}</div>
+      <span class="player-tour-badge badge-${player.tour.toLowerCase()}">${player.tour}</span>
+    `;
+    card.addEventListener('click', () => selectAnswer(index, name, card));
+    grid.appendChild(card);
+  });
+
+  document.getElementById('btn-back').disabled = index === 0;
+  const nextBtn = document.getElementById('btn-next');
+  nextBtn.disabled = !chosenAnswers[index];
+  nextBtn.textContent = index === total - 1 ? 'See My Calendar →' : 'Next →';
+}
+
+function selectAnswer(index, playerName, cardEl) {
+  const q = allQuestions[index];
+  if (chosenAnswers[index]) {
+    deaccumulateAnswer(chosenAnswers[index], q.dimension);
+  }
+  chosenAnswers[index] = playerName;
+  accumulateAnswer(playerName, q.dimension);
+  answeredIndices.add(index);
+
+  document.querySelectorAll('.player-card').forEach(c => c.classList.remove('selected'));
+  cardEl.classList.add('selected');
+  document.getElementById('btn-next').disabled = false;
+}
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  const index = currentQuestionIndex;
+  if (index < allQuestions.length - 1) {
+    renderQuestion(index + 1);
+  } else {
+    scoredTournaments = scoreTournaments();
+    showScreen('screen-results');
+    renderCalendar();
+  }
+});
+
+document.getElementById('btn-back').addEventListener('click', () => {
+  if (currentQuestionIndex > 0) renderQuestion(currentQuestionIndex - 1);
+  else { showScreen('screen-category'); renderCategoryPicker(); }
+});
+
+// ── SCREEN 3: CALENDAR ──
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function prestige2Class(prestige) {
+  if (prestige === 'grand-slam') return 'grand-slam';
+  if (prestige === 'masters')    return 'masters';
+  if (prestige === '500')        return 'lvl-500';
+  return 'lvl-250';
+}
+
+function renderCalendar() {
+  const calendar = document.getElementById('calendar');
+  calendar.innerHTML = '';
+
+  const byMonth = Array.from({ length: 12 }, () => []);
+  scoredTournaments.forEach(t => { byMonth[t.month - 1].push(t); });
+
+  const top3Names = new Set(scoredTournaments.slice(0, 3).map(t => t.name));
+
+  MONTH_NAMES.forEach((month, i) => {
+    const col = document.createElement('div');
+    col.className = 'cal-month';
+    col.innerHTML = `<div class="cal-month-label">${month}</div><div class="cal-events"></div>`;
+    calendar.appendChild(col);
+
+    const eventsContainer = col.querySelector('.cal-events');
+    byMonth[i].sort((a, b) => b.matchScore - a.matchScore).forEach(t => {
+      const card = document.createElement('div');
+      card.className = `t-card ${prestige2Class(t.prestige)}`;
+      const scorePercent = Math.round(Math.min(t.matchScore, 1) * 100);
+      const country = t.location.split(',')[1]?.trim() || t.location;
+      card.innerHTML = `
+        ${top3Names.has(t.name) ? '<span class="best-match-badge">Best Match</span>' : ''}
+        <div class="t-card-name">${t.name}</div>
+        <div class="t-card-meta">${t.surface} · ${country}</div>
+        <div class="t-card-score">${scorePercent}% match</div>
+      `;
+      card.addEventListener('click', () => showDetailPanel(t));
+      eventsContainer.appendChild(card);
+    });
+  });
+}
+
+document.getElementById('btn-restart').addEventListener('click', () => {
+  selectedCategories = [];
+  Object.keys(chosenAnswers).forEach(k => delete chosenAnswers[k]);
+  scoredTournaments = [];
+  showScreen('screen-category');
+  renderCategoryPicker();
+});
+
+// ── DETAIL PANEL ──
+
+function showDetailPanel(tournament) {
+  document.getElementById('detail-prestige').textContent =
+    tournament.prestige === 'grand-slam' ? 'Grand Slam'
+    : tournament.prestige === 'masters'  ? 'Masters / 1000'
+    : tournament.prestige === '500'      ? '500 Level'
+    : '250 Level';
+
+  document.getElementById('detail-name').textContent = tournament.name;
+
+  const scorePercent = Math.round(Math.min(tournament.matchScore, 1) * 100);
+  document.getElementById('score-fill').style.width = `${scorePercent}%`;
+
+  document.getElementById('detail-rows').innerHTML = [
+    { key: 'Location', val: tournament.location },
+    { key: 'Surface',  val: tournament.surface.charAt(0).toUpperCase() + tournament.surface.slice(1) },
+    { key: 'Tour',     val: tournament.tour === 'both' ? 'ATP & WTA' : tournament.tour },
+  ].map(r => `
+    <div class="detail-row">
+      <span class="detail-row-key">${r.key}</span>
+      <span class="detail-row-val">${r.val}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('detail-players').innerHTML =
+    `<span class="label" style="display:block;margin-bottom:6px">Regulars</span>${tournament.notables.join(' · ')}`;
+
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+document.getElementById('detail-close').addEventListener('click', () => {
+  document.getElementById('overlay').classList.add('hidden');
+});
+
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('overlay'))
+    document.getElementById('overlay').classList.add('hidden');
+});
+
+// ── SCREEN NAVIGATION ──
+function showScreen(id) {
+  ['screen-category','screen-quiz','screen-results'].forEach(s => {
+    const el = document.getElementById(s);
+    el.classList.toggle('hidden', s !== id);
+    if (s === id) {
+      el.style.animation = 'none';
+      el.offsetHeight;
+      el.style.animation = '';
+    }
+  });
+}
+
+// ── INIT ──
+renderCategoryPicker();
   </script>
 </body>
 </html>
