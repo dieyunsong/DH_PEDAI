@@ -487,6 +487,64 @@
         { question: "Best doubles communicator and tactician?", options: ['Felix Auger-Aliassime','Barbora Krejcikova','Tommy Paul','Leylah Fernandez'] },
       ],
     };
+
+    // ── APP STATE ──
+    let selectedCategories = [];
+    let allQuestions = [];
+    let currentQuestionIndex = 0;
+    let userVector = {};
+    let answeredIndices = new Set();
+    let scoredTournaments = [];
+
+    // ── SCORING ENGINE ──
+
+    function playerByName(name) {
+      return PLAYERS.find(p => p.name === name);
+    }
+
+    function accumulateAnswer(playerName, activeDim) {
+      const player = playerByName(playerName);
+      if (!player) return;
+      DIMENSIONS.forEach(dim => {
+        const weight = dim === activeDim ? 2 : 0.5;
+        userVector[dim] = (userVector[dim] || 0) + player.scores[dim] * weight;
+      });
+    }
+
+    function deaccumulateAnswer(playerName, activeDim) {
+      const player = playerByName(playerName);
+      if (!player) return;
+      DIMENSIONS.forEach(dim => {
+        const weight = dim === activeDim ? 2 : 0.5;
+        userVector[dim] = (userVector[dim] || 0) - player.scores[dim] * weight;
+      });
+    }
+
+    function cosineSimilarity(vecA, vecB, dims) {
+      let dot = 0, magA = 0, magB = 0;
+      for (const d of dims) {
+        const a = vecA[d] || 0;
+        const b = vecB[d] || 0;
+        dot  += a * b;
+        magA += a * a;
+        magB += b * b;
+      }
+      return (magA && magB) ? dot / (Math.sqrt(magA) * Math.sqrt(magB)) : 0;
+    }
+
+    function computePrestigeBonus(prestige) {
+      if (prestige === 'grand-slam') return 0.1;
+      if (prestige === 'masters')    return 0.05;
+      return 0;
+    }
+
+    function scoreTournaments() {
+      return TOURNAMENTS.map(t => ({
+        ...t,
+        matchScore: cosineSimilarity(userVector, t.vibe, selectedCategories)
+                  + computePrestigeBonus(t.prestige)
+      })).sort((a, b) => b.matchScore - a.matchScore);
+    }
   </script>
 </body>
 </html>
