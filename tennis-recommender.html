@@ -437,6 +437,56 @@
       { name:'Bad Homburg Open', surface:'grass', prestige:'250', month:6, week:25, tour:'WTA', vibe:{ forehand:5,serve:8,slice:9,mindset:7,humor:6,style:8,doubles:7 }, notables:['Elena Rybakina','Marketa Vondrousova','Ons Jabeur','Donna Vekic','Petra Kvitova'], location:'Bad Homburg, Germany' },
       { name:'Adelaide International', surface:'hard', prestige:'250', month:1, week:1, tour:'WTA', vibe:{ forehand:7,serve:8,slice:5,mindset:6,humor:7,style:7,doubles:7 }, notables:['Aryna Sabalenka','Elena Rybakina','Jessica Pegula','Maria Sakkari','Barbora Krejcikova'], location:'Adelaide, Australia' },
     ];
+
+    // ── CATEGORY DEFINITIONS ──
+    const CATEGORIES = [
+      { id:'forehand', icon:'🎾', name:'Forehand',           desc:'Power, topspin, groundstroke flair' },
+      { id:'serve',    icon:'💥', name:'Serve',               desc:'Speed, placement, kick variety' },
+      { id:'slice',    icon:'✂️', name:'Slice & Net',         desc:'Defensive craft, touch, net play' },
+      { id:'mindset',  icon:'🧠', name:'Mindset',             desc:'Mental toughness, composure under pressure' },
+      { id:'humor',    icon:'😄', name:'Humor & Personality', desc:'Off-court character and charisma' },
+      { id:'style',    icon:'✨', name:'Personal Style',      desc:'Fashion, aesthetic, self-expression' },
+      { id:'doubles',  icon:'🤝', name:'Doubles Vibes',       desc:"Who you'd want as a partner" },
+    ];
+
+    // ── QUIZ QUESTIONS (3 per dimension, 4 player options each) ──
+    const QUIZ_QUESTIONS = {
+      forehand: [
+        { question: "Whose forehand do you most want to hit?", options: ['Carlos Alcaraz','Iga Swiatek','Andrey Rublev','Jelena Ostapenko'] },
+        { question: "Which forehand winner is most satisfying to watch?", options: ['Stefanos Tsitsipas','Madison Keys','Grigor Dimitrov','Qinwen Zheng'] },
+        { question: "Who hits the best inside-out forehand?", options: ['Novak Djokovic','Aryna Sabalenka','Taylor Fritz','Coco Gauff'] },
+      ],
+      serve: [
+        { question: "Whose serve would you most want to borrow?", options: ['Elena Rybakina','Alexander Zverev','Hubert Hurkacz','Aryna Sabalenka'] },
+        { question: "Best first serve in a big moment?", options: ['Ben Shelton','Karolina Pliskova','Nicolas Jarry','Madison Keys'] },
+        { question: "Most complete server — power, placement, and kick?", options: ['Jannik Sinner','Caroline Garcia','Taylor Fritz','Liudmila Samsonova'] },
+      ],
+      slice: [
+        { question: "Best slice backhand in the game?", options: ['Novak Djokovic','Ons Jabeur','Lorenzo Musetti','Marketa Vondrousova'] },
+        { question: "Who would you most want at the net?", options: ['Hubert Hurkacz','Ons Jabeur','Felix Auger-Aliassime','Barbora Krejcikova'] },
+        { question: "Most creative shot-maker overall?", options: ['Carlos Alcaraz','Ons Jabeur','Grigor Dimitrov','Jasmine Paolini'] },
+      ],
+      mindset: [
+        { question: "Who handles pressure best?", options: ['Novak Djokovic','Iga Swiatek','Daniil Medvedev','Elena Rybakina'] },
+        { question: "Best comeback artist?", options: ['Alexander Zverev','Coco Gauff','Jannik Sinner','Aryna Sabalenka'] },
+        { question: "Who seems most unflappable on court?", options: ['Daniil Medvedev','Elena Rybakina','Casper Ruud','Elina Svitolina'] },
+      ],
+      humor: [
+        { question: "Who would you most want to have dinner with?", options: ['Frances Tiafoe','Coco Gauff','Stefanos Tsitsipas','Ons Jabeur'] },
+        { question: "Funniest press conference personality?", options: ['Daniil Medvedev','Daria Kasatkina','Alex de Minaur','Mirra Andreeva'] },
+        { question: "Most fun off-court personality?", options: ['Carlos Alcaraz','Coco Gauff','Gael Monfils','Danielle Collins'] },
+      ],
+      style: [
+        { question: "Best dressed on court?", options: ['Coco Gauff','Lorenzo Musetti','Ons Jabeur','Carlos Alcaraz'] },
+        { question: "Most distinctive personal brand?", options: ['Iga Swiatek','Daniil Medvedev','Aryna Sabalenka','Stefanos Tsitsipas'] },
+        { question: "Most effortlessly cool aesthetic?", options: ['Elena Rybakina','Grigor Dimitrov','Paula Badosa','Frances Tiafoe'] },
+      ],
+      doubles: [
+        { question: "Who would you most want as your doubles partner?", options: ['Hubert Hurkacz','Coco Gauff','Alex de Minaur','Barbora Krejcikova'] },
+        { question: "Who brings the best energy in doubles?", options: ['Ben Shelton','Ons Jabeur','Frances Tiafoe','Jessica Pegula'] },
+        { question: "Best doubles communicator and tactician?", options: ['Felix Auger-Aliassime','Barbora Krejcikova','Tommy Paul','Leylah Fernandez'] },
+      ],
+    };
   </script>
 </body>
 </html>
