@@ -1,0 +1,1540 @@
+# Tennis Tournament Recommender Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Build a single self-contained `tennis-recommender.html` that lets users pick quiz categories, answer player-choice questions, and see a Wimbledon-styled calendar of recommended tournaments.
+
+**Architecture:** One HTML file; all CSS in `<style>`, all JS in `<script>`. Three screens (category picker → quiz → calendar) swapped via `hidden` class. Player and tournament data are plain JS constants at the top of the script block. Scoring uses cosine similarity between the accumulated user preference vector and each tournament's vibe vector.
+
+**Tech Stack:** Vanilla HTML5, CSS custom properties, vanilla ES6 JS. Google Fonts (EB Garamond + Josefin Sans). No build step, no dependencies.
+
+---
+
+## File Structure
+
+```
+DH_PEDAI/
+└── tennis-recommender.html    ← single output file, all code here
+```
+
+---
+
+## Task 1: HTML Skeleton + Wimbledon CSS
+
+**Files:**
+- Create: `tennis-recommender.html`
+
+- [ ] **Step 1: Create the file with the following complete content**
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tennis Tournament Recommender</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── Wimbledon Design Tokens ── */
+    :root {
+      --color-crimson:    #6b1212;
+      --color-strawberry: #8B1A1A;
+      --color-sage:       #a8d5a2;
+      --color-cream:      #fff8f0;
+      --color-blush:      #e8d5c4;
+      --color-midnight:   #1a1a1a;
+      --font-serif: 'EB Garamond', Georgia, serif;
+      --font-sans:  'Josefin Sans', Arial, sans-serif;
+      --space-xs: 8px;
+      --space-sm: 16px;
+      --space-md: 28px;
+      --space-lg: 48px;
+      --space-xl: 72px;
+      --radius: 2px;
+    }
+
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--color-midnight);
+      color: var(--color-blush);
+      font-family: var(--font-serif);
+      font-size: 16px;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .screen {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: var(--space-lg) var(--space-md);
+      animation: fadeIn 0.4s ease;
+    }
+    .hidden { display: none !important; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Typography ── */
+    h1, h2, h3 {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-weight: 400;
+      color: var(--color-cream);
+    }
+    h1 { font-size: 48px; line-height: 1.1; }
+    h2 { font-size: 28px; line-height: 1.25; }
+    h3 { font-size: 20px; line-height: 1.4; font-style: normal; }
+    .label {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 300;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--color-sage);
+    }
+    .rule {
+      display: block;
+      width: 38px;
+      height: 1px;
+      background: var(--color-sage);
+      margin: var(--space-xs) 0;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      background: var(--color-sage);
+      color: var(--color-midnight);
+      border: none;
+      padding: 14px 32px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: var(--color-cream); }
+    .btn:disabled { background: #444; color: #777; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--color-blush);
+      border: 1px solid #444;
+    }
+    .btn-ghost:hover { border-color: var(--color-sage); color: var(--color-cream); background: transparent; }
+
+    /* ── Hero header ── */
+    .hero {
+      background: var(--color-crimson);
+      padding: var(--space-lg) var(--space-md);
+      text-align: center;
+      border-bottom: 1px solid var(--color-strawberry);
+    }
+    .hero .label { display: block; margin-bottom: var(--space-sm); }
+    .hero h1 { margin-bottom: var(--space-xs); }
+    .hero p { color: var(--color-blush); max-width: 520px; margin: var(--space-sm) auto 0; }
+
+    /* ── Category Picker ── */
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-sm);
+      margin: var(--space-md) 0;
+    }
+    .category-tile {
+      background: var(--color-crimson);
+      border: 1px solid var(--color-strawberry);
+      border-radius: var(--radius);
+      padding: var(--space-md) var(--space-sm);
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.2s, background 0.2s;
+      user-select: none;
+    }
+    .category-tile:hover { border-color: var(--color-sage); }
+    .category-tile.selected {
+      border-color: var(--color-sage);
+      background: var(--color-strawberry);
+    }
+    .category-tile .tile-icon { font-size: 28px; margin-bottom: var(--space-xs); }
+    .category-tile .tile-name {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--color-cream);
+    }
+    .category-tile .tile-desc {
+      font-size: 13px;
+      color: var(--color-blush);
+      margin-top: 6px;
+    }
+    .category-tile.selected .tile-name { color: var(--color-sage); }
+    .picker-hint {
+      color: var(--color-blush);
+      font-size: 14px;
+      margin-bottom: var(--space-md);
+    }
+    .picker-actions { text-align: center; margin-top: var(--space-md); }
+
+    /* ── Quiz Screen ── */
+    .progress-bar-wrap {
+      height: 3px;
+      background: var(--color-strawberry);
+      border-radius: 2px;
+      margin-bottom: var(--space-md);
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--color-sage);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    .quiz-header { margin-bottom: var(--space-md); }
+    .quiz-header .label { margin-bottom: var(--space-xs); }
+    .quiz-question { font-size: 24px; margin-bottom: var(--space-md); }
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+    .player-card {
+      background: var(--color-crimson);
+      border: 1px solid var(--color-strawberry);
+      border-radius: var(--radius);
+      padding: var(--space-md) var(--space-sm);
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .player-card:hover { border-color: var(--color-sage); background: var(--color-strawberry); }
+    .player-card.selected {
+      border-color: var(--color-sage);
+      background: var(--color-strawberry);
+    }
+    .player-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--color-strawberry);
+      border: 2px solid var(--color-sage);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto var(--space-xs);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-cream);
+      letter-spacing: 1px;
+    }
+    .player-name {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      color: var(--color-cream);
+    }
+    .player-tour-badge {
+      display: inline-block;
+      font-family: var(--font-sans);
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 1px;
+      margin-top: 4px;
+    }
+    .badge-atp { background: #1a3a5c; color: #7ab3e0; }
+    .badge-wta { background: #3a1a3a; color: #d07ad0; }
+    .quiz-nav { display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-sm); }
+    .quiz-counter { font-family: var(--font-sans); font-size: 10px; letter-spacing: 3px; color: var(--color-blush); text-transform: uppercase; }
+
+    /* ── Results / Calendar ── */
+    .results-intro { margin-bottom: var(--space-lg); }
+    .calendar-wrap { overflow-x: auto; padding-bottom: var(--space-sm); }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(130px, 1fr));
+      gap: var(--space-xs);
+      min-width: 1200px;
+    }
+    .cal-month { }
+    .cal-month-label {
+      font-family: var(--font-sans);
+      font-size: 9px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--color-sage);
+      margin-bottom: var(--space-xs);
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--color-strawberry);
+    }
+    .cal-events { display: flex; flex-direction: column; gap: 6px; }
+    .t-card {
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: border-color 0.2s, transform 0.15s;
+      position: relative;
+    }
+    .t-card:hover { transform: translateY(-2px); border-color: var(--color-cream); }
+    .t-card.grand-slam   { background: var(--color-crimson); border-color: var(--color-strawberry); }
+    .t-card.masters      { background: var(--color-strawberry); border-color: #a03030; }
+    .t-card.lvl-500      { background: transparent; border-color: var(--color-sage); }
+    .t-card.lvl-250      { background: transparent; border-color: var(--color-blush); }
+    .t-card-name {
+      font-family: var(--font-serif);
+      font-size: 13px;
+      color: var(--color-cream);
+      line-height: 1.3;
+    }
+    .t-card-meta {
+      font-family: var(--font-sans);
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--color-blush);
+      margin-top: 3px;
+    }
+    .t-card-score {
+      font-family: var(--font-sans);
+      font-size: 9px;
+      color: var(--color-sage);
+      margin-top: 3px;
+    }
+    .best-match-badge {
+      position: absolute;
+      top: -8px; right: 6px;
+      font-family: var(--font-sans);
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: var(--color-sage);
+      color: var(--color-midnight);
+      padding: 2px 6px;
+      border-radius: 1px;
+    }
+    .results-actions { text-align: center; margin-top: var(--space-lg); display: flex; gap: var(--space-sm); justify-content: center; }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-md);
+    }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .legend-swatch {
+      width: 14px; height: 14px;
+      border-radius: 1px;
+      border: 1px solid transparent;
+    }
+    .legend-swatch.grand-slam { background: var(--color-crimson); border-color: var(--color-strawberry); }
+    .legend-swatch.masters    { background: var(--color-strawberry); border-color: #a03030; }
+    .legend-swatch.lvl-500    { background: transparent; border-color: var(--color-sage); }
+    .legend-swatch.lvl-250    { background: transparent; border-color: var(--color-blush); }
+    .legend-label { font-family: var(--font-sans); font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--color-blush); }
+
+    /* ── Detail Panel ── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      animation: fadeIn 0.2s ease;
+    }
+    .detail-panel {
+      background: var(--color-crimson);
+      border: 1px solid var(--color-strawberry);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+      max-width: 500px;
+      width: 90%;
+      position: relative;
+    }
+    .detail-close {
+      position: absolute; top: var(--space-sm); right: var(--space-sm);
+      background: none; border: none;
+      color: var(--color-blush); font-size: 20px; cursor: pointer;
+      line-height: 1;
+    }
+    .detail-close:hover { color: var(--color-cream); }
+    .detail-name { font-size: 28px; margin: var(--space-xs) 0 var(--space-sm); }
+    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--color-strawberry); }
+    .detail-row:last-of-type { border-bottom: none; }
+    .detail-row-key { font-family: var(--font-sans); font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--color-sage); }
+    .detail-row-val { font-size: 14px; color: var(--color-cream); }
+    .detail-players { font-size: 13px; color: var(--color-blush); margin-top: var(--space-sm); }
+    .match-score-bar { margin-top: var(--space-sm); }
+    .score-label { font-family: var(--font-sans); font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--color-sage); margin-bottom: 6px; }
+    .score-track { height: 4px; background: var(--color-strawberry); border-radius: 2px; }
+    .score-fill { height: 100%; background: var(--color-sage); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <span class="label">Tennis Tournament Recommender</span>
+    <h1>Find Your Tournament</h1>
+    <p>Answer a few questions about the players and styles you love. We'll map the calendar to your game.</p>
+  </div>
+
+  <!-- ── Screen 1: Category Picker ── -->
+  <div id="screen-category" class="screen">
+    <p class="label">Step 1 of 3</p>
+    <span class="rule"></span>
+    <h2>Choose Your Dimensions</h2>
+    <p class="picker-hint">Select 2 to 5 aspects of tennis that matter most to you.</p>
+    <div class="category-grid" id="category-grid"></div>
+    <div class="picker-actions">
+      <button class="btn" id="btn-start-quiz" disabled>Start Quiz →</button>
+    </div>
+  </div>
+
+  <!-- ── Screen 2: Quiz ── -->
+  <div id="screen-quiz" class="screen hidden">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-bar"></div>
+    </div>
+    <div class="quiz-header">
+      <p class="label" id="quiz-dim-label">Forehand</p>
+      <span class="rule"></span>
+      <h2 id="quiz-question-text"></h2>
+    </div>
+    <div class="player-grid" id="player-grid"></div>
+    <div class="quiz-nav">
+      <button class="btn btn-ghost" id="btn-back">← Back</button>
+      <span class="quiz-counter" id="quiz-counter"></span>
+      <button class="btn" id="btn-next" disabled>Next →</button>
+    </div>
+  </div>
+
+  <!-- ── Screen 3: Calendar Results ── -->
+  <div id="screen-results" class="screen hidden">
+    <div class="results-intro">
+      <p class="label">Your Tournament Calendar</p>
+      <span class="rule"></span>
+      <h2>Tournaments Matched to Your Profile</h2>
+      <p style="margin-top:var(--space-sm)">Click any tournament for details. Your top 3 matches are highlighted.</p>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch grand-slam"></div><span class="legend-label">Grand Slam</span></div>
+      <div class="legend-item"><div class="legend-swatch masters"></div><span class="legend-label">Masters / 1000</span></div>
+      <div class="legend-item"><div class="legend-swatch lvl-500"></div><span class="legend-label">500 Level</span></div>
+      <div class="legend-item"><div class="legend-swatch lvl-250"></div><span class="legend-label">250 Level</span></div>
+    </div>
+    <div class="calendar-wrap">
+      <div class="calendar" id="calendar"></div>
+    </div>
+    <div class="results-actions">
+      <button class="btn btn-ghost" id="btn-restart">Start Over</button>
+    </div>
+  </div>
+
+  <!-- ── Detail Panel (overlay) ── -->
+  <div id="overlay" class="overlay hidden">
+    <div class="detail-panel">
+      <button class="detail-close" id="detail-close">✕</button>
+      <p class="label" id="detail-prestige"></p>
+      <span class="rule"></span>
+      <h2 class="detail-name" id="detail-name"></h2>
+      <div id="detail-rows"></div>
+      <div class="detail-players" id="detail-players"></div>
+      <div class="match-score-bar">
+        <p class="score-label">Match Score</p>
+        <div class="score-track"><div class="score-fill" id="score-fill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── DATA AND LOGIC WILL BE ADDED IN SUBSEQUENT TASKS ──
+  </script>
+</body>
+</html>
+```
+
+- [ ] **Step 2: Open in browser and verify layout**
+
+Open `tennis-recommender.html` in a browser. You should see:
+- Dark midnight background
+- Crimson hero with "Find Your Tournament" in italic EB Garamond
+- Three empty screen divs (only category screen visible)
+- Wimbledon fonts loading from Google Fonts
+
+- [ ] **Step 3: Commit**
+
+```bash
+cd /Users/Dieyun/Documents/DHSI2026/DH_PEDAI
+git add tennis-recommender.html
+git commit -m "feat: add tennis recommender HTML skeleton with Wimbledon CSS"
+```
+
+---
+
+## Task 2: Player Data
+
+**Files:**
+- Modify: `tennis-recommender.html` — replace `// ── DATA AND LOGIC WILL BE ADDED IN SUBSEQUENT TASKS ──` with the content below
+
+- [ ] **Step 1: Replace the placeholder comment with the PLAYERS constant**
+
+Inside the `<script>` block, replace the placeholder comment with:
+
+```js
+// ── DIMENSIONS ──
+const DIMENSIONS = ['forehand','serve','slice','mindset','humor','style','doubles'];
+
+// ── PLAYERS (top ATP + WTA, scores 1–10 per dimension) ──
+const PLAYERS = [
+  // ATP
+  { name:'Carlos Alcaraz',         tour:'ATP', scores:{ forehand:10,serve:8,slice:7,mindset:8,humor:8,style:9,doubles:9 } },
+  { name:'Jannik Sinner',          tour:'ATP', scores:{ forehand:8, serve:8,slice:6,mindset:10,humor:6,style:7,doubles:7 } },
+  { name:'Novak Djokovic',         tour:'ATP', scores:{ forehand:8, serve:7,slice:10,mindset:10,humor:7,style:6,doubles:7 } },
+  { name:'Alexander Zverev',       tour:'ATP', scores:{ forehand:8, serve:9,slice:5,mindset:7,humor:7,style:7,doubles:7 } },
+  { name:'Daniil Medvedev',        tour:'ATP', scores:{ forehand:7, serve:8,slice:5,mindset:9,humor:9,style:5,doubles:6 } },
+  { name:'Casper Ruud',            tour:'ATP', scores:{ forehand:8, serve:7,slice:5,mindset:8,humor:6,style:6,doubles:6 } },
+  { name:'Andrey Rublev',          tour:'ATP', scores:{ forehand:9, serve:7,slice:5,mindset:6,humor:7,style:6,doubles:8 } },
+  { name:'Stefanos Tsitsipas',     tour:'ATP', scores:{ forehand:9, serve:7,slice:7,mindset:7,humor:8,style:8,doubles:7 } },
+  { name:'Hubert Hurkacz',         tour:'ATP', scores:{ forehand:7, serve:9,slice:6,mindset:7,humor:7,style:7,doubles:9 } },
+  { name:'Taylor Fritz',           tour:'ATP', scores:{ forehand:8, serve:9,slice:6,mindset:7,humor:7,style:7,doubles:7 } },
+  { name:'Alex de Minaur',         tour:'ATP', scores:{ forehand:7, serve:7,slice:7,mindset:9,humor:8,style:7,doubles:9 } },
+  { name:'Tommy Paul',             tour:'ATP', scores:{ forehand:7, serve:7,slice:6,mindset:7,humor:8,style:7,doubles:8 } },
+  { name:'Grigor Dimitrov',        tour:'ATP', scores:{ forehand:9, serve:7,slice:8,mindset:7,humor:7,style:8,doubles:7 } },
+  { name:'Holger Rune',            tour:'ATP', scores:{ forehand:8, serve:7,slice:6,mindset:7,humor:7,style:8,doubles:6 } },
+  { name:'Ben Shelton',            tour:'ATP', scores:{ forehand:8, serve:10,slice:5,mindset:7,humor:8,style:8,doubles:8 } },
+  { name:'Frances Tiafoe',         tour:'ATP', scores:{ forehand:8, serve:7,slice:6,mindset:7,humor:10,style:9,doubles:9 } },
+  { name:'Sebastian Korda',        tour:'ATP', scores:{ forehand:7, serve:8,slice:6,mindset:7,humor:7,style:7,doubles:7 } },
+  { name:'Felix Auger-Aliassime',  tour:'ATP', scores:{ forehand:7, serve:8,slice:6,mindset:7,humor:7,style:8,doubles:9 } },
+  { name:'Ugo Humbert',            tour:'ATP', scores:{ forehand:7, serve:7,slice:7,mindset:7,humor:7,style:7,doubles:7 } },
+  { name:'Lorenzo Musetti',        tour:'ATP', scores:{ forehand:8, serve:7,slice:8,mindset:7,humor:7,style:8,doubles:7 } },
+  { name:'Nicolas Jarry',          tour:'ATP', scores:{ forehand:7, serve:8,slice:6,mindset:7,humor:6,style:6,doubles:6 } },
+  { name:'Karen Khachanov',        tour:'ATP', scores:{ forehand:8, serve:8,slice:5,mindset:6,humor:6,style:6,doubles:7 } },
+  { name:'Christopher Eubanks',    tour:'ATP', scores:{ forehand:7, serve:9,slice:6,mindset:7,humor:8,style:8,doubles:7 } },
+  { name:'Jack Draper',            tour:'ATP', scores:{ forehand:8, serve:8,slice:6,mindset:7,humor:7,style:7,doubles:7 } },
+  { name:'Arthur Fils',            tour:'ATP', scores:{ forehand:8, serve:7,slice:5,mindset:7,humor:7,style:7,doubles:7 } },
+  { name:'Matteo Berrettini',      tour:'ATP', scores:{ forehand:8, serve:9,slice:7,mindset:7,humor:7,style:8,doubles:7 } },
+  { name:'Gael Monfils',           tour:'ATP', scores:{ forehand:8, serve:7,slice:6,mindset:6,humor:9,style:9,doubles:8 } },
+  { name:'Sebastian Baez',         tour:'ATP', scores:{ forehand:7, serve:6,slice:7,mindset:7,humor:6,style:6,doubles:6 } },
+  { name:'Francisco Cerundolo',    tour:'ATP', scores:{ forehand:8, serve:6,slice:6,mindset:7,humor:6,style:6,doubles:6 } },
+  { name:'Jiri Lehecka',           tour:'ATP', scores:{ forehand:7, serve:7,slice:6,mindset:7,humor:7,style:7,doubles:6 } },
+  { name:'Tomas Machac',           tour:'ATP', scores:{ forehand:7, serve:7,slice:6,mindset:7,humor:7,style:7,doubles:6 } },
+  { name:'Jordan Thompson',        tour:'ATP', scores:{ forehand:6, serve:7,slice:6,mindset:7,humor:7,style:6,doubles:6 } },
+  { name:'Miomir Kecmanovic',      tour:'ATP', scores:{ forehand:7, serve:6,slice:6,mindset:7,humor:6,style:6,doubles:6 } },
+  { name:'Jan-Lennard Struff',     tour:'ATP', scores:{ forehand:7, serve:9,slice:5,mindset:6,humor:6,style:5,doubles:6 } },
+  { name:'Tallon Griekspoor',      tour:'ATP', scores:{ forehand:7, serve:7,slice:6,mindset:6,humor:6,style:6,doubles:6 } },
+  { name:'Roberto Bautista Agut',  tour:'ATP', scores:{ forehand:6, serve:7,slice:7,mindset:8,humor:6,style:6,doubles:7 } },
+  { name:'Roman Safiullin',        tour:'ATP', scores:{ forehand:7, serve:7,slice:6,mindset:6,humor:6,style:5,doubles:6 } },
+  { name:'Matteo Arnaldi',         tour:'ATP', scores:{ forehand:7, serve:7,slice:6,mindset:6,humor:6,style:7,doubles:6 } },
+  { name:'Alejandro Davidovich Fokina', tour:'ATP', scores:{ forehand:7,serve:6,slice:7,mindset:7,humor:7,style:7,doubles:7 } },
+  { name:'Botic van de Zandschulp',tour:'ATP', scores:{ forehand:6, serve:7,slice:6,mindset:6,humor:6,style:6,doubles:6 } },
+
+  // WTA
+  { name:'Iga Swiatek',            tour:'WTA', scores:{ forehand:10,serve:7,slice:7,mindset:10,humor:7,style:7,doubles:7 } },
+  { name:'Aryna Sabalenka',        tour:'WTA', scores:{ forehand:9, serve:10,slice:5,mindset:8,humor:8,style:8,doubles:7 } },
+  { name:'Coco Gauff',             tour:'WTA', scores:{ forehand:8, serve:7,slice:6,mindset:8,humor:8,style:9,doubles:9 } },
+  { name:'Elena Rybakina',         tour:'WTA', scores:{ forehand:8, serve:10,slice:6,mindset:9,humor:5,style:7,doubles:7 } },
+  { name:'Jessica Pegula',         tour:'WTA', scores:{ forehand:8, serve:7,slice:6,mindset:8,humor:8,style:7,doubles:9 } },
+  { name:'Marketa Vondrousova',    tour:'WTA', scores:{ forehand:7, serve:6,slice:8,mindset:8,humor:7,style:7,doubles:8 } },
+  { name:'Ons Jabeur',             tour:'WTA', scores:{ forehand:7, serve:7,slice:9,mindset:8,humor:10,style:9,doubles:9 } },
+  { name:'Qinwen Zheng',           tour:'WTA', scores:{ forehand:9, serve:7,slice:6,mindset:7,humor:7,style:8,doubles:7 } },
+  { name:'Maria Sakkari',          tour:'WTA', scores:{ forehand:8, serve:7,slice:6,mindset:7,humor:8,style:8,doubles:7 } },
+  { name:'Barbora Krejcikova',     tour:'WTA', scores:{ forehand:7, serve:7,slice:7,mindset:8,humor:7,style:7,doubles:10 } },
+  { name:'Jasmine Paolini',        tour:'WTA', scores:{ forehand:7, serve:6,slice:7,mindset:8,humor:8,style:7,doubles:8 } },
+  { name:'Mirra Andreeva',         tour:'WTA', scores:{ forehand:7, serve:6,slice:7,mindset:7,humor:8,style:7,doubles:7 } },
+  { name:'Daria Kasatkina',        tour:'WTA', scores:{ forehand:7, serve:6,slice:7,mindset:7,humor:9,style:8,doubles:7 } },
+  { name:'Liudmila Samsonova',     tour:'WTA', scores:{ forehand:8, serve:8,slice:5,mindset:7,humor:6,style:6,doubles:6 } },
+  { name:'Madison Keys',           tour:'WTA', scores:{ forehand:9, serve:8,slice:5,mindset:7,humor:7,style:7,doubles:7 } },
+  { name:'Beatriz Haddad Maia',    tour:'WTA', scores:{ forehand:8, serve:7,slice:6,mindset:7,humor:7,style:7,doubles:8 } },
+  { name:'Jelena Ostapenko',       tour:'WTA', scores:{ forehand:10,serve:7,slice:5,mindset:6,humor:7,style:7,doubles:7 } },
+  { name:'Paula Badosa',           tour:'WTA', scores:{ forehand:8, serve:7,slice:6,mindset:7,humor:8,style:9,doubles:8 } },
+  { name:'Elina Svitolina',        tour:'WTA', scores:{ forehand:7, serve:6,slice:7,mindset:9,humor:7,style:7,doubles:7 } },
+  { name:'Caroline Garcia',        tour:'WTA', scores:{ forehand:8, serve:8,slice:6,mindset:7,humor:7,style:7,doubles:8 } },
+  { name:'Victoria Azarenka',      tour:'WTA', scores:{ forehand:8, serve:7,slice:6,mindset:9,humor:7,style:7,doubles:8 } },
+  { name:'Anna Kalinskaya',        tour:'WTA', scores:{ forehand:7, serve:7,slice:6,mindset:6,humor:7,style:8,doubles:6 } },
+  { name:'Ekaterina Alexandrova',  tour:'WTA', scores:{ forehand:7, serve:7,slice:6,mindset:7,humor:6,style:6,doubles:6 } },
+  { name:'Veronika Kudermetova',   tour:'WTA', scores:{ forehand:7, serve:7,slice:6,mindset:7,humor:6,style:6,doubles:7 } },
+  { name:'Emma Navarro',           tour:'WTA', scores:{ forehand:7, serve:7,slice:7,mindset:7,humor:7,style:7,doubles:7 } },
+  { name:'Danielle Collins',       tour:'WTA', scores:{ forehand:8, serve:7,slice:5,mindset:7,humor:8,style:7,doubles:7 } },
+  { name:'Leylah Fernandez',       tour:'WTA', scores:{ forehand:7, serve:6,slice:7,mindset:8,humor:8,style:7,doubles:8 } },
+  { name:'Karolina Muchova',       tour:'WTA', scores:{ forehand:7, serve:7,slice:7,mindset:7,humor:7,style:7,doubles:7 } },
+  { name:'Karolina Pliskova',      tour:'WTA', scores:{ forehand:7, serve:9,slice:6,mindset:7,humor:6,style:7,doubles:7 } },
+  { name:'Diana Shnaider',         tour:'WTA', scores:{ forehand:8, serve:8,slice:5,mindset:7,humor:6,style:7,doubles:6 } },
+  { name:'Donna Vekic',            tour:'WTA', scores:{ forehand:7, serve:7,slice:6,mindset:7,humor:7,style:8,doubles:7 } },
+  { name:'Petra Kvitova',          tour:'WTA', scores:{ forehand:7, serve:7,slice:6,mindset:8,humor:7,style:7,doubles:8 } },
+  { name:'Bianca Andreescu',       tour:'WTA', scores:{ forehand:8, serve:7,slice:7,mindset:7,humor:7,style:8,doubles:7 } },
+  { name:'Sorana Cirstea',         tour:'WTA', scores:{ forehand:7, serve:7,slice:6,mindset:7,humor:7,style:7,doubles:6 } },
+  { name:'Anastasia Pavlyuchenkova',tour:'WTA',scores:{ forehand:8, serve:7,slice:6,mindset:7,humor:7,style:6,doubles:7 } },
+  { name:'Magda Linette',          tour:'WTA', scores:{ forehand:6, serve:6,slice:6,mindset:7,humor:7,style:6,doubles:7 } },
+  { name:'Amanda Anisimova',       tour:'WTA', scores:{ forehand:8, serve:7,slice:5,mindset:6,humor:7,style:7,doubles:6 } },
+  { name:'Lesia Tsurenko',         tour:'WTA', scores:{ forehand:6, serve:6,slice:6,mindset:7,humor:6,style:6,doubles:6 } },
+  { name:'Xinyu Wang',             tour:'WTA', scores:{ forehand:7, serve:6,slice:6,mindset:7,humor:6,style:6,doubles:6 } },
+  { name:'Clara Tauson',           tour:'WTA', scores:{ forehand:7, serve:7,slice:6,mindset:6,humor:7,style:7,doubles:6 } },
+];
+```
+
+- [ ] **Step 2: Verify in browser console**
+
+Open browser DevTools console and run:
+```js
+console.log(PLAYERS.length); // expected: 79
+console.log(PLAYERS.find(p => p.name === 'Carlos Alcaraz').scores.forehand); // expected: 10
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tennis-recommender.html
+git commit -m "feat: add player data with dimension scores (ATP + WTA)"
+```
+
+---
+
+## Task 3: Tournament Data
+
+**Files:**
+- Modify: `tennis-recommender.html` — append after the PLAYERS constant
+
+- [ ] **Step 1: Add TOURNAMENTS constant after PLAYERS**
+
+```js
+// ── TOURNAMENTS (250-level and above) ──
+// prestige: 'grand-slam' | 'masters' | '500' | '250'
+// tour: 'ATP' | 'WTA' | 'both'
+// surface: 'hard' | 'clay' | 'grass'
+// month: 1–12, week: ISO week number
+// vibe: dimension scores 1–10 (personality of the tournament)
+// notables: 3–5 players known to regularly attend
+const TOURNAMENTS = [
+  // ── Grand Slams ──
+  {
+    name:'Australian Open', surface:'hard', prestige:'grand-slam', month:1, week:2, tour:'both',
+    vibe:{ forehand:8,serve:8,slice:5,mindset:9,humor:7,style:7,doubles:8 },
+    notables:['Novak Djokovic','Aryna Sabalenka','Jannik Sinner','Madison Keys','Carlos Alcaraz'],
+    location:'Melbourne, Australia'
+  },
+  {
+    name:'Roland Garros', surface:'clay', prestige:'grand-slam', month:5, week:21, tour:'both',
+    vibe:{ forehand:9,serve:5,slice:8,mindset:10,humor:7,style:8,doubles:7 },
+    notables:['Iga Swiatek','Carlos Alcaraz','Casper Ruud','Jannik Sinner','Barbora Krejcikova'],
+    location:'Paris, France'
+  },
+  {
+    name:'Wimbledon', surface:'grass', prestige:'grand-slam', month:6, week:26, tour:'both',
+    vibe:{ forehand:6,serve:9,slice:10,mindset:9,humor:6,style:10,doubles:8 },
+    notables:['Novak Djokovic','Elena Rybakina','Carlos Alcaraz','Marketa Vondrousova','Hubert Hurkacz'],
+    location:'London, England'
+  },
+  {
+    name:'US Open', surface:'hard', prestige:'grand-slam', month:8, week:35, tour:'both',
+    vibe:{ forehand:8,serve:8,slice:5,mindset:8,humor:9,style:8,doubles:8 },
+    notables:['Carlos Alcaraz','Coco Gauff','Daniil Medvedev','Aryna Sabalenka','Frances Tiafoe'],
+    location:'New York, USA'
+  },
+
+  // ── Masters 1000 / WTA 1000 ──
+  {
+    name:'Indian Wells Masters', surface:'hard', prestige:'masters', month:3, week:10, tour:'both',
+    vibe:{ forehand:8,serve:8,slice:6,mindset:7,humor:7,style:9,doubles:7 },
+    notables:['Carlos Alcaraz','Iga Swiatek','Taylor Fritz','Elena Rybakina','Daniil Medvedev'],
+    location:'Indian Wells, USA'
+  },
+  {
+    name:'Miami Open', surface:'hard', prestige:'masters', month:3, week:12, tour:'both',
+    vibe:{ forehand:7,serve:8,slice:5,mindset:7,humor:8,style:8,doubles:8 },
+    notables:['Jannik Sinner','Daniil Medvedev','Aryna Sabalenka','Jessica Pegula','Carlos Alcaraz'],
+    location:'Miami, USA'
+  },
+  {
+    name:'Monte-Carlo Masters', surface:'clay', prestige:'masters', month:4, week:15, tour:'ATP',
+    vibe:{ forehand:8,serve:5,slice:8,mindset:8,humor:7,style:9,doubles:7 },
+    notables:['Novak Djokovic','Carlos Alcaraz','Casper Ruud','Stefanos Tsitsipas','Andrey Rublev'],
+    location:'Monte Carlo, Monaco'
+  },
+  {
+    name:'Madrid Open', surface:'clay', prestige:'masters', month:4, week:19, tour:'both',
+    vibe:{ forehand:9,serve:6,slice:7,mindset:8,humor:8,style:9,doubles:7 },
+    notables:['Carlos Alcaraz','Iga Swiatek','Jannik Sinner','Aryna Sabalenka','Coco Gauff'],
+    location:'Madrid, Spain'
+  },
+  {
+    name:'Italian Open (Rome)', surface:'clay', prestige:'masters', month:5, week:20, tour:'both',
+    vibe:{ forehand:9,serve:5,slice:8,mindset:8,humor:8,style:9,doubles:7 },
+    notables:['Carlos Alcaraz','Iga Swiatek','Novak Djokovic','Jasmine Paolini','Holger Rune'],
+    location:'Rome, Italy'
+  },
+  {
+    name:'Canadian Open', surface:'hard', prestige:'masters', month:8, week:32, tour:'both',
+    vibe:{ forehand:8,serve:8,slice:5,mindset:7,humor:8,style:7,doubles:7 },
+    notables:['Daniil Medvedev','Iga Swiatek','Felix Auger-Aliassime','Aryna Sabalenka','Holger Rune'],
+    location:'Montreal / Toronto, Canada'
+  },
+  {
+    name:'Cincinnati Masters', surface:'hard', prestige:'masters', month:8, week:33, tour:'both',
+    vibe:{ forehand:7,serve:8,slice:5,mindset:8,humor:7,style:7,doubles:7 },
+    notables:['Jannik Sinner','Carlos Alcaraz','Coco Gauff','Daniil Medvedev','Elena Rybakina'],
+    location:'Cincinnati, USA'
+  },
+  {
+    name:'Shanghai Masters', surface:'hard', prestige:'masters', month:10, week:41, tour:'ATP',
+    vibe:{ forehand:8,serve:8,slice:5,mindset:7,humor:6,style:7,doubles:6 },
+    notables:['Novak Djokovic','Jannik Sinner','Carlos Alcaraz','Daniil Medvedev','Taylor Fritz'],
+    location:'Shanghai, China'
+  },
+  {
+    name:'China Open (Beijing)', surface:'hard', prestige:'masters', month:10, week:40, tour:'WTA',
+    vibe:{ forehand:8,serve:7,slice:5,mindset:7,humor:6,style:8,doubles:6 },
+    notables:['Iga Swiatek','Aryna Sabalenka','Coco Gauff','Elena Rybakina','Qinwen Zheng'],
+    location:'Beijing, China'
+  },
+  {
+    name:'Paris Masters', surface:'hard', prestige:'masters', month:10, week:43, tour:'ATP',
+    vibe:{ forehand:7,serve:9,slice:6,mindset:8,humor:8,style:8,doubles:7 },
+    notables:['Novak Djokovic','Daniil Medvedev','Jannik Sinner','Alexander Zverev','Holger Rune'],
+    location:'Paris, France'
+  },
+  {
+    name:'ATP Finals', surface:'hard', prestige:'masters', month:11, week:46, tour:'ATP',
+    vibe:{ forehand:8,serve:8,slice:6,mindset:10,humor:7,style:8,doubles:7 },
+    notables:['Jannik Sinner','Carlos Alcaraz','Novak Djokovic','Daniil Medvedev','Alexander Zverev'],
+    location:'Turin, Italy'
+  },
+  {
+    name:'WTA Finals', surface:'hard', prestige:'masters', month:10, week:44, tour:'WTA',
+    vibe:{ forehand:9,serve:8,slice:6,mindset:10,humor:7,style:9,doubles:8 },
+    notables:['Iga Swiatek','Aryna Sabalenka','Coco Gauff','Elena Rybakina','Jessica Pegula'],
+    location:'Riyadh, Saudi Arabia'
+  },
+
+  // ── ATP 500 ──
+  {
+    name:'Rotterdam Open', surface:'hard', prestige:'500', month:2, week:6, tour:'ATP',
+    vibe:{ forehand:7,serve:9,slice:5,mindset:7,humor:6,style:6,doubles:6 },
+    notables:['Daniil Medvedev','Andrey Rublev','Hubert Hurkacz','Felix Auger-Aliassime','Stefanos Tsitsipas'],
+    location:'Rotterdam, Netherlands'
+  },
+  {
+    name:'Dubai Duty Free Championships', surface:'hard', prestige:'500', month:2, week:8, tour:'ATP',
+    vibe:{ forehand:7,serve:8,slice:6,mindset:7,humor:6,style:8,doubles:6 },
+    notables:['Novak Djokovic','Daniil Medvedev','Andrey Rublev','Jannik Sinner','Taylor Fritz'],
+    location:'Dubai, UAE'
+  },
+  {
+    name:'Acapulco Open', surface:'hard', prestige:'500', month:2, week:8, tour:'ATP',
+    vibe:{ forehand:8,serve:8,slice:5,mindset:6,humor:9,style:8,doubles:8 },
+    notables:['Alexander Zverev','Carlos Alcaraz','Andrey Rublev','Frances Tiafoe','Tommy Paul'],
+    location:'Acapulco, Mexico'
+  },
+  {
+    name:'Barcelona Open', surface:'clay', prestige:'500', month:4, week:17, tour:'ATP',
+    vibe:{ forehand:9,serve:5,slice:7,mindset:7,humor:8,style:8,doubles:7 },
+    notables:['Carlos Alcaraz','Stefanos Tsitsipas','Casper Ruud','Holger Rune','Andrey Rublev'],
+    location:'Barcelona, Spain'
+  },
+  {
+    name:'Hamburg Open', surface:'clay', prestige:'500', month:7, week:29, tour:'ATP',
+    vibe:{ forehand:8,serve:5,slice:7,mindset:8,humor:7,style:7,doubles:6 },
+    notables:['Alexander Zverev','Carlos Alcaraz','Casper Ruud','Andrey Rublev','Lorenzo Musetti'],
+    location:'Hamburg, Germany'
+  },
+  {
+    name:'Washington Open', surface:'hard', prestige:'500', month:7, week:31, tour:'ATP',
+    vibe:{ forehand:7,serve:9,slice:5,mindset:7,humor:8,style:7,doubles:7 },
+    notables:['Ben Shelton','Frances Tiafoe','Taylor Fritz','Tommy Paul','Felix Auger-Aliassime'],
+    location:'Washington DC, USA'
+  },
+  {
+    name:'Vienna Open', surface:'hard', prestige:'500', month:10, week:43, tour:'ATP',
+    vibe:{ forehand:7,serve:8,slice:6,mindset:7,humor:7,style:8,doubles:7 },
+    notables:['Daniil Medvedev','Andrey Rublev','Holger Rune','Felix Auger-Aliassime','Grigor Dimitrov'],
+    location:'Vienna, Austria'
+  },
+  {
+    name:'Swiss Indoors Basel', surface:'hard', prestige:'500', month:10, week:44, tour:'ATP',
+    vibe:{ forehand:7,serve:8,slice:6,mindset:7,humor:7,style:8,doubles:7 },
+    notables:['Novak Djokovic','Holger Rune','Felix Auger-Aliassime','Grigor Dimitrov','Ugo Humbert'],
+    location:'Basel, Switzerland'
+  },
+
+  // ── WTA 500 ──
+  {
+    name:'Doha (WTA 1000)', surface:'hard', prestige:'masters', month:2, week:6, tour:'WTA',
+    vibe:{ forehand:8,serve:7,slice:5,mindset:7,humor:6,style:8,doubles:6 },
+    notables:['Iga Swiatek','Aryna Sabalenka','Elena Rybakina','Jessica Pegula','Maria Sakkari'],
+    location:'Doha, Qatar'
+  },
+  {
+    name:'Stuttgart Open', surface:'clay', prestige:'500', month:4, week:17, tour:'WTA',
+    vibe:{ forehand:8,serve:6,slice:7,mindset:7,humor:7,style:9,doubles:7 },
+    notables:['Iga Swiatek','Aryna Sabalenka','Coco Gauff','Maria Sakkari','Jelena Ostapenko'],
+    location:'Stuttgart, Germany'
+  },
+  {
+    name:'Berlin Open', surface:'grass', prestige:'500', month:6, week:24, tour:'WTA',
+    vibe:{ forehand:6,serve:8,slice:9,mindset:7,humor:7,style:8,doubles:7 },
+    notables:['Elena Rybakina','Aryna Sabalenka','Marketa Vondrousova','Ons Jabeur','Barbora Krejcikova'],
+    location:'Berlin, Germany'
+  },
+  {
+    name:'Eastbourne International', surface:'grass', prestige:'500', month:6, week:25, tour:'WTA',
+    vibe:{ forehand:5,serve:8,slice:9,mindset:7,humor:7,style:8,doubles:7 },
+    notables:['Ons Jabeur','Marketa Vondrousova','Elena Rybakina','Barbora Krejcikova','Madison Keys'],
+    location:'Eastbourne, England'
+  },
+  {
+    name:'San Jose Open', surface:'hard', prestige:'500', month:7, week:30, tour:'WTA',
+    vibe:{ forehand:8,serve:7,slice:5,mindset:6,humor:8,style:7,doubles:8 },
+    notables:['Jessica Pegula','Coco Gauff','Danielle Collins','Madison Keys','Pegula'],
+    location:'San Jose, USA'
+  },
+  {
+    name:'Guadalajara Open', surface:'hard', prestige:'500', month:10, week:42, tour:'WTA',
+    vibe:{ forehand:8,serve:7,slice:5,mindset:7,humor:8,style:7,doubles:7 },
+    notables:['Iga Swiatek','Aryna Sabalenka','Coco Gauff','Jessica Pegula','Beatriz Haddad Maia'],
+    location:'Guadalajara, Mexico'
+  },
+
+  // ── ATP 250 / WTA 250 (select marquee events) ──
+  {
+    name:'Auckland Classic', surface:'hard', prestige:'250', month:1, week:1, tour:'both',
+    vibe:{ forehand:7,serve:8,slice:5,mindset:6,humor:8,style:7,doubles:8 },
+    notables:['Daniil Medvedev','Iga Swiatek','Ben Shelton','Jessica Pegula','Tommy Paul'],
+    location:'Auckland, New Zealand'
+  },
+  {
+    name:"Queen's Club Championships", surface:'grass', prestige:'500', month:6, week:24, tour:'ATP',
+    vibe:{ forehand:6,serve:9,slice:9,mindset:7,humor:7,style:8,doubles:7 },
+    notables:['Carlos Alcaraz','Novak Djokovic','Daniil Medvedev','Hubert Hurkacz','Grigor Dimitrov'],
+    location:'London, England'
+  },
+  {
+    name:'Halle Open', surface:'grass', prestige:'500', month:6, week:24, tour:'ATP',
+    vibe:{ forehand:6,serve:9,slice:9,mindset:7,humor:7,style:7,doubles:7 },
+    notables:['Alexander Zverev','Daniil Medvedev','Hubert Hurkacz','Taylor Fritz','Ben Shelton'],
+    location:'Halle, Germany'
+  },
+  {
+    name:'Geneva Open', surface:'clay', prestige:'250', month:5, week:20, tour:'ATP',
+    vibe:{ forehand:8,serve:5,slice:8,mindset:8,humor:7,style:8,doubles:6 },
+    notables:['Casper Ruud','Stefanos Tsitsipas','Lorenzo Musetti','Grigor Dimitrov','Sebastian Korda'],
+    location:'Geneva, Switzerland'
+  },
+  {
+    name:'Lyon Open', surface:'clay', prestige:'250', month:5, week:20, tour:'ATP',
+    vibe:{ forehand:8,serve:6,slice:7,mindset:7,humor:7,style:8,doubles:6 },
+    notables:['Ugo Humbert','Arthur Fils','Gael Monfils','Lorenzo Musetti','Holger Rune'],
+    location:'Lyon, France'
+  },
+  {
+    name:'Newport Hall of Fame Open', surface:'grass', prestige:'250', month:7, week:28, tour:'ATP',
+    vibe:{ forehand:5,serve:8,slice:9,mindset:7,humor:7,style:7,doubles:8 },
+    notables:['Grigor Dimitrov','Roberto Bautista Agut','Felix Auger-Aliassime','Jack Draper','Ugo Humbert'],
+    location:'Newport, USA'
+  },
+  {
+    name:'Bad Homburg Open', surface:'grass', prestige:'250', month:6, week:25, tour:'WTA',
+    vibe:{ forehand:5,serve:8,slice:9,mindset:7,humor:6,style:8,doubles:7 },
+    notables:['Elena Rybakina','Marketa Vondrousova','Ons Jabeur','Donna Vekic','Petra Kvitova'],
+    location:'Bad Homburg, Germany'
+  },
+  {
+    name:'Adelaide International', surface:'hard', prestige:'250', month:1, week:1, tour:'WTA',
+    vibe:{ forehand:7,serve:8,slice:5,mindset:6,humor:7,style:7,doubles:7 },
+    notables:['Aryna Sabalenka','Elena Rybakina','Jessica Pegula','Maria Sakkari','Barbora Krejcikova'],
+    location:'Adelaide, Australia'
+  },
+];
+```
+
+- [ ] **Step 2: Verify in console**
+
+```js
+console.log(TOURNAMENTS.length); // expected: ~38
+console.log(TOURNAMENTS.find(t => t.name === 'Wimbledon').prestige); // expected: 'grand-slam'
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tennis-recommender.html
+git commit -m "feat: add tournament data with vibe vectors and notables"
+```
+
+---
+
+## Task 4: Quiz Question Definitions
+
+**Files:**
+- Modify: `tennis-recommender.html` — append after TOURNAMENTS
+
+- [ ] **Step 1: Add CATEGORIES and QUIZ_QUESTIONS constants**
+
+```js
+// ── CATEGORY DEFINITIONS ──
+const CATEGORIES = [
+  { id:'forehand', icon:'🎾', name:'Forehand',          desc:'Power, topspin, groundstroke flair' },
+  { id:'serve',    icon:'💥', name:'Serve',              desc:'Speed, placement, kick variety' },
+  { id:'slice',    icon:'✂️', name:'Slice & Net',        desc:'Defensive craft, touch, net play' },
+  { id:'mindset',  icon:'🧠', name:'Mindset',            desc:'Mental toughness, composure under pressure' },
+  { id:'humor',    icon:'😄', name:'Humor & Personality',desc:'Off-court character and charisma' },
+  { id:'style',    icon:'✨', name:'Personal Style',     desc:'Fashion, aesthetic, self-expression' },
+  { id:'doubles',  icon:'🤝', name:'Doubles Vibes',      desc:'Who you'd want as a partner' },
+];
+
+// ── QUIZ QUESTIONS (3 per dimension, 4 player options each) ──
+// options: array of player names (must exist in PLAYERS)
+const QUIZ_QUESTIONS = {
+  forehand: [
+    {
+      question: "Whose forehand do you most want to hit?",
+      options: ['Carlos Alcaraz','Iga Swiatek','Andrey Rublev','Jelena Ostapenko']
+    },
+    {
+      question: "Which forehand winner is most satisfying to watch?",
+      options: ['Stefanos Tsitsipas','Madison Keys','Grigor Dimitrov','Qinwen Zheng']
+    },
+    {
+      question: "Who hits the best inside-out forehand?",
+      options: ['Novak Djokovic','Aryna Sabalenka','Taylor Fritz','Coco Gauff']
+    },
+  ],
+  serve: [
+    {
+      question: "Whose serve would you most want to borrow?",
+      options: ['Elena Rybakina','Alexander Zverev','Hubert Hurkacz','Aryna Sabalenka']
+    },
+    {
+      question: "Best first serve in a big moment?",
+      options: ['Ben Shelton','Karolina Pliskova','Nicolas Jarry','Madison Keys']
+    },
+    {
+      question: "Most complete server — power, placement, and kick?",
+      options: ['Jannik Sinner','Caroline Garcia','Taylor Fritz','Liudmila Samsonova']
+    },
+  ],
+  slice: [
+    {
+      question: "Best slice backhand in the game?",
+      options: ['Novak Djokovic','Ons Jabeur','Lorenzo Musetti','Marketa Vondrousova']
+    },
+    {
+      question: "Who would you most want at the net?",
+      options: ['Hubert Hurkacz','Ons Jabeur','Felix Auger-Aliassime','Barbora Krejcikova']
+    },
+    {
+      question: "Most creative shot-maker overall?",
+      options: ['Carlos Alcaraz','Ons Jabeur','Grigor Dimitrov','Jasmine Paolini']
+    },
+  ],
+  mindset: [
+    {
+      question: "Who handles pressure best?",
+      options: ['Novak Djokovic','Iga Swiatek','Daniil Medvedev','Elena Rybakina']
+    },
+    {
+      question: "Best comeback artist?",
+      options: ['Alexander Zverev','Coco Gauff','Jannik Sinner','Aryna Sabalenka']
+    },
+    {
+      question: "Who seems most unflappable on court?",
+      options: ['Daniil Medvedev','Elena Rybakina','Casper Ruud','Elina Svitolina']
+    },
+  ],
+  humor: [
+    {
+      question: "Who would you most want to have dinner with?",
+      options: ['Frances Tiafoe','Coco Gauff','Stefanos Tsitsipas','Ons Jabeur']
+    },
+    {
+      question: "Funniest press conference personality?",
+      options: ['Daniil Medvedev','Daria Kasatkina','Alex de Minaur','Mirra Andreeva']
+    },
+    {
+      question: "Most fun off-court personality?",
+      options: ['Carlos Alcaraz','Coco Gauff','Gael Monfils','Danielle Collins']
+    },
+  ],
+  style: [
+    {
+      question: "Best dressed on court?",
+      options: ['Coco Gauff','Lorenzo Musetti','Ons Jabeur','Carlos Alcaraz']
+    },
+    {
+      question: "Most distinctive personal brand?",
+      options: ['Iga Swiatek','Daniil Medvedev','Aryna Sabalenka','Stefanos Tsitsipas']
+    },
+    {
+      question: "Most effortlessly cool aesthetic?",
+      options: ['Elena Rybakina','Grigor Dimitrov','Paula Badosa','Frances Tiafoe']
+    },
+  ],
+  doubles: [
+    {
+      question: "Who would you most want as your doubles partner?",
+      options: ['Hubert Hurkacz','Coco Gauff','Alex de Minaur','Barbora Krejcikova']
+    },
+    {
+      question: "Who brings the best energy in doubles?",
+      options: ['Ben Shelton','Ons Jabeur','Frances Tiafoe','Jessica Pegula']
+    },
+    {
+      question: "Best doubles communicator and tactician?",
+      options: ['Felix Auger-Aliassime','Barbora Krejcikova','Tommy Paul','Leylah Fernandez']
+    },
+  ],
+};
+```
+
+- [ ] **Step 2: Verify in console**
+
+```js
+console.log(CATEGORIES.length); // expected: 7
+console.log(QUIZ_QUESTIONS.forehand.length); // expected: 3
+console.log(QUIZ_QUESTIONS.doubles[0].options.length); // expected: 4
+// Verify all player names exist in PLAYERS:
+Object.values(QUIZ_QUESTIONS).flat().forEach(q =>
+  q.options.forEach(name => {
+    if (!PLAYERS.find(p => p.name === name))
+      console.warn('Missing player:', name);
+  })
+);
+// Expected: no warnings
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tennis-recommender.html
+git commit -m "feat: add category definitions and quiz question bank"
+```
+
+---
+
+## Task 5: App State + Scoring Engine
+
+**Files:**
+- Modify: `tennis-recommender.html` — append after QUIZ_QUESTIONS
+
+- [ ] **Step 1: Add state variables and scoring functions**
+
+```js
+// ── APP STATE ──
+let selectedCategories = [];  // array of dimension ids
+let allQuestions = [];        // flat array of {dimension, question, options} in quiz order
+let currentQuestionIndex = 0;
+let userVector = {};          // accumulated player score sums keyed by dimension
+let answeredIndices = new Set(); // question indices that have been answered
+let scoredTournaments = [];   // filled after quiz completes
+
+// ── SCORING ENGINE ──
+
+function playerByName(name) {
+  return PLAYERS.find(p => p.name === name);
+}
+
+// Accumulate player scores into userVector when a question is answered.
+// The active dimension gets 2× weight; all other dimensions get 0.5×.
+function accumulateAnswer(playerName, activeDim) {
+  const player = playerByName(playerName);
+  if (!player) return;
+  DIMENSIONS.forEach(dim => {
+    const weight = dim === activeDim ? 2 : 0.5;
+    userVector[dim] = (userVector[dim] || 0) + player.scores[dim] * weight;
+  });
+}
+
+// Remove accumulated scores for a specific question (used when going back and re-answering).
+function deaccumulateAnswer(playerName, activeDim) {
+  const player = playerByName(playerName);
+  if (!player) return;
+  DIMENSIONS.forEach(dim => {
+    const weight = dim === activeDim ? 2 : 0.5;
+    userVector[dim] = (userVector[dim] || 0) - player.scores[dim] * weight;
+  });
+}
+
+function cosineSimilarity(vecA, vecB, dims) {
+  let dot = 0, magA = 0, magB = 0;
+  for (const d of dims) {
+    const a = vecA[d] || 0;
+    const b = vecB[d] || 0;
+    dot  += a * b;
+    magA += a * a;
+    magB += b * b;
+  }
+  return (magA && magB) ? dot / (Math.sqrt(magA) * Math.sqrt(magB)) : 0;
+}
+
+function computePrestigeBonus(prestige) {
+  if (prestige === 'grand-slam') return 0.1;
+  if (prestige === 'masters')    return 0.05;
+  return 0;
+}
+
+function scoreTournaments() {
+  return TOURNAMENTS.map(t => ({
+    ...t,
+    matchScore: cosineSimilarity(userVector, t.vibe, selectedCategories)
+              + computePrestigeBonus(t.prestige)
+  })).sort((a, b) => b.matchScore - a.matchScore);
+}
+
+// ── CONSOLE SELF-TEST (runs once on load) ──
+(function selfTest() {
+  const fakeVec = { forehand:10, serve:10, slice:1, mindset:1, humor:1, style:1, doubles:1 };
+  const dims = ['forehand','serve'];
+  const wimbledon = TOURNAMENTS.find(t => t.name === 'Wimbledon');
+  const sim = cosineSimilarity(fakeVec, wimbledon.vibe, dims);
+  console.assert(sim > 0 && sim <= 1.1, 'cosineSimilarity out of expected range:', sim);
+  console.log('[selfTest] cosineSimilarity OK, value:', sim.toFixed(3));
+})();
+```
+
+- [ ] **Step 2: Verify self-test passes**
+
+Reload the page and check the browser console. You should see:
+```
+[selfTest] cosineSimilarity OK, value: 0.xxx
+```
+No assertion errors.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tennis-recommender.html
+git commit -m "feat: add app state and cosine similarity scoring engine"
+```
+
+---
+
+## Task 6: Screen 1 — Category Picker
+
+**Files:**
+- Modify: `tennis-recommender.html` — append after the self-test block
+
+- [ ] **Step 1: Add category picker logic**
+
+```js
+// ── SCREEN 1: CATEGORY PICKER ──
+
+function renderCategoryPicker() {
+  const grid = document.getElementById('category-grid');
+  grid.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const tile = document.createElement('div');
+    tile.className = 'category-tile' + (selectedCategories.includes(cat.id) ? ' selected' : '');
+    tile.dataset.id = cat.id;
+    tile.innerHTML = `
+      <div class="tile-icon">${cat.icon}</div>
+      <div class="tile-name">${cat.name}</div>
+      <div class="tile-desc">${cat.desc}</div>
+    `;
+    tile.addEventListener('click', () => toggleCategory(cat.id));
+    grid.appendChild(tile);
+  });
+  updateStartButton();
+}
+
+function toggleCategory(id) {
+  if (selectedCategories.includes(id)) {
+    if (selectedCategories.length > 2) selectedCategories = selectedCategories.filter(c => c !== id);
+    // Prevent deselecting below 2 once quiz has started; on picker screen just enforce minimum at start
+  } else {
+    if (selectedCategories.length < 5) selectedCategories.push(id);
+  }
+  renderCategoryPicker();
+}
+
+function updateStartButton() {
+  const btn = document.getElementById('btn-start-quiz');
+  const count = selectedCategories.length;
+  btn.disabled = count < 2;
+  btn.textContent = count >= 2 ? `Start Quiz (${count} selected) →` : 'Select at least 2';
+}
+
+document.getElementById('btn-start-quiz').addEventListener('click', () => {
+  buildQuestionList();
+  showScreen('screen-quiz');
+  renderQuestion(0);
+});
+```
+
+- [ ] **Step 2: Add `showScreen` helper and initializer at the bottom of the script (before closing `</script>`)**
+
+```js
+// ── SCREEN NAVIGATION ──
+function showScreen(id) {
+  ['screen-category','screen-quiz','screen-results'].forEach(s => {
+    const el = document.getElementById(s);
+    el.classList.toggle('hidden', s !== id);
+    if (s === id) {
+      // Re-trigger animation
+      el.style.animation = 'none';
+      el.offsetHeight; // reflow
+      el.style.animation = '';
+    }
+  });
+}
+
+// ── INIT ──
+renderCategoryPicker();
+```
+
+- [ ] **Step 3: Test in browser**
+
+Reload. You should see 7 category tiles. Click tiles — they highlight in sage. Clicking a 6th tile should do nothing. "Start Quiz" should be disabled until 2 are selected. Clicking "Start Quiz" should show the (not yet rendered) quiz screen.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add tennis-recommender.html
+git commit -m "feat: add category picker screen with selection logic"
+```
+
+---
+
+## Task 7: Screen 2 — Quiz Questions
+
+**Files:**
+- Modify: `tennis-recommender.html` — insert between the category picker logic and the `showScreen` helper
+
+- [ ] **Step 1: Add quiz logic**
+
+```js
+// ── SCREEN 2: QUIZ ──
+
+function buildQuestionList() {
+  allQuestions = [];
+  userVector = {};
+  answeredIndices = new Set();
+  currentQuestionIndex = 0;
+  selectedCategories.forEach(dim => {
+    QUIZ_QUESTIONS[dim].forEach(q => {
+      allQuestions.push({ dimension: dim, ...q });
+    });
+  });
+}
+
+// Track which answer was chosen per question index so we can deaccumulate on back.
+const chosenAnswers = {};
+
+function renderQuestion(index) {
+  currentQuestionIndex = index;
+  const q = allQuestions[index];
+  const total = allQuestions.length;
+  const cat = CATEGORIES.find(c => c.id === q.dimension);
+
+  // Progress bar
+  document.getElementById('progress-bar').style.width = `${((index) / total) * 100}%`;
+
+  // Labels
+  document.getElementById('quiz-dim-label').textContent = cat ? cat.name : q.dimension;
+  document.getElementById('quiz-question-text').textContent = q.question;
+  document.getElementById('quiz-counter').textContent = `Question ${index + 1} of ${total}`;
+
+  // Player cards
+  const grid = document.getElementById('player-grid');
+  grid.innerHTML = '';
+  q.options.forEach(name => {
+    const player = playerByName(name);
+    if (!player) return;
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0,3);
+    const card = document.createElement('div');
+    card.className = 'player-card' + (chosenAnswers[index] === name ? ' selected' : '');
+    card.innerHTML = `
+      <div class="player-avatar">${initials}</div>
+      <div class="player-name">${name}</div>
+      <span class="player-tour-badge badge-${player.tour.toLowerCase()}">${player.tour}</span>
+    `;
+    card.addEventListener('click', () => selectAnswer(index, name));
+    grid.appendChild(card);
+  });
+
+  // Nav buttons
+  document.getElementById('btn-back').disabled = index === 0;
+  const nextBtn = document.getElementById('btn-next');
+  nextBtn.disabled = !chosenAnswers[index];
+  nextBtn.textContent = index === total - 1 ? 'See My Calendar →' : 'Next →';
+}
+
+function selectAnswer(index, playerName) {
+  const q = allQuestions[index];
+  // Deaccumulate previous answer for this question if re-answering
+  if (chosenAnswers[index]) {
+    deaccumulateAnswer(chosenAnswers[index], q.dimension);
+  }
+  chosenAnswers[index] = playerName;
+  accumulateAnswer(playerName, q.dimension);
+  answeredIndices.add(index);
+
+  // Update card highlight
+  document.querySelectorAll('.player-card').forEach(card => card.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  document.getElementById('btn-next').disabled = false;
+}
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  const index = currentQuestionIndex;
+  if (index < allQuestions.length - 1) {
+    renderQuestion(index + 1);
+  } else {
+    // Quiz complete — compute scores and show results
+    scoredTournaments = scoreTournaments();
+    showScreen('screen-results');
+    renderCalendar();
+  }
+});
+
+document.getElementById('btn-back').addEventListener('click', () => {
+  if (currentQuestionIndex > 0) renderQuestion(currentQuestionIndex - 1);
+  else { showScreen('screen-category'); renderCategoryPicker(); }
+});
+```
+
+- [ ] **Step 2: Test in browser**
+
+Select 2 categories, click "Start Quiz". You should see:
+- A progress bar that starts empty
+- The dimension label in sage
+- 4 player cards, each with initials avatar and tour badge
+- "Next →" disabled until a card is clicked
+- Clicking a card highlights it and enables "Next →"
+- Back button returns to previous question (or category picker on Q1)
+- Last question shows "See My Calendar →"
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tennis-recommender.html
+git commit -m "feat: add quiz screen with player card selection and vector accumulation"
+```
+
+---
+
+## Task 8: Screen 3 — Calendar Results
+
+**Files:**
+- Modify: `tennis-recommender.html` — insert before `showScreen` helper
+
+- [ ] **Step 1: Add calendar rendering logic**
+
+```js
+// ── SCREEN 3: CALENDAR ──
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function prestige2Class(prestige) {
+  if (prestige === 'grand-slam') return 'grand-slam';
+  if (prestige === 'masters')    return 'masters';
+  if (prestige === '500')        return 'lvl-500';
+  return 'lvl-250';
+}
+
+function renderCalendar() {
+  const calendar = document.getElementById('calendar');
+  calendar.innerHTML = '';
+
+  // Group tournaments by month
+  const byMonth = Array.from({ length: 12 }, () => []);
+  scoredTournaments.forEach(t => {
+    byMonth[t.month - 1].push(t);
+  });
+
+  // Top 3 highest match scores (regardless of month)
+  const top3Names = new Set(scoredTournaments.slice(0, 3).map(t => t.name));
+
+  MONTH_NAMES.forEach((month, i) => {
+    const col = document.createElement('div');
+    col.className = 'cal-month';
+    col.innerHTML = `<div class="cal-month-label">${month}</div><div class="cal-events" id="month-${i}"></div>`;
+    calendar.appendChild(col);
+
+    const eventsContainer = col.querySelector('.cal-events');
+    const monthTournaments = byMonth[i].sort((a, b) => b.matchScore - a.matchScore);
+
+    monthTournaments.forEach(t => {
+      const card = document.createElement('div');
+      const cls = prestige2Class(t.prestige);
+      card.className = `t-card ${cls}`;
+      const scorePercent = Math.round(Math.min(t.matchScore, 1) * 100);
+      card.innerHTML = `
+        ${top3Names.has(t.name) ? '<span class="best-match-badge">Best Match</span>' : ''}
+        <div class="t-card-name">${t.name}</div>
+        <div class="t-card-meta">${t.surface} · ${t.location.split(',')[1]?.trim() || t.location}</div>
+        <div class="t-card-score">${scorePercent}% match</div>
+      `;
+      card.addEventListener('click', () => showDetailPanel(t));
+      eventsContainer.appendChild(card);
+    });
+  });
+}
+
+document.getElementById('btn-restart').addEventListener('click', () => {
+  selectedCategories = [];
+  Object.keys(chosenAnswers).forEach(k => delete chosenAnswers[k]);
+  scoredTournaments = [];
+  showScreen('screen-category');
+  renderCategoryPicker();
+});
+```
+
+- [ ] **Step 2: Test in browser**
+
+Complete a quiz. You should see:
+- 12 monthly columns in a horizontal scrollable row
+- Tournament cards in the correct months, colour-coded by prestige
+- Top 3 results show "Best Match" badge
+- Match percentage shown on each card
+- "Start Over" button resets everything
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tennis-recommender.html
+git commit -m "feat: add calendar results screen with prestige colour coding"
+```
+
+---
+
+## Task 9: Tournament Detail Panel
+
+**Files:**
+- Modify: `tennis-recommender.html` — insert before `showScreen` helper
+
+- [ ] **Step 1: Add detail panel logic**
+
+```js
+// ── DETAIL PANEL ──
+
+function showDetailPanel(tournament) {
+  document.getElementById('detail-prestige').textContent =
+    tournament.prestige === 'grand-slam' ? 'Grand Slam'
+    : tournament.prestige === 'masters'  ? 'Masters / 1000'
+    : tournament.prestige === '500'      ? '500 Level'
+    : '250 Level';
+
+  document.getElementById('detail-name').textContent = tournament.name;
+
+  const scorePercent = Math.round(Math.min(tournament.matchScore, 1) * 100);
+  document.getElementById('score-fill').style.width = `${scorePercent}%`;
+
+  const rows = [
+    { key: 'Location', val: tournament.location },
+    { key: 'Surface',  val: tournament.surface.charAt(0).toUpperCase() + tournament.surface.slice(1) },
+    { key: 'Tour',     val: tournament.tour === 'both' ? 'ATP & WTA' : tournament.tour },
+  ];
+
+  document.getElementById('detail-rows').innerHTML = rows.map(r => `
+    <div class="detail-row">
+      <span class="detail-row-key">${r.key}</span>
+      <span class="detail-row-val">${r.val}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('detail-players').innerHTML =
+    `<span class="label" style="display:block;margin-bottom:6px">Regulars</span>${tournament.notables.join(' · ')}`;
+
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+document.getElementById('detail-close').addEventListener('click', () => {
+  document.getElementById('overlay').classList.add('hidden');
+});
+
+document.getElementById('overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('overlay')) {
+    document.getElementById('overlay').classList.add('hidden');
+  }
+});
+```
+
+- [ ] **Step 2: Test in browser**
+
+Click any tournament card on the results screen. You should see:
+- Overlay with dark backdrop
+- Panel showing prestige label, tournament name, location, surface, tour
+- Notables list
+- Match score bar filled proportionally
+- Clicking ✕ or the backdrop closes the panel
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tennis-recommender.html
+git commit -m "feat: add tournament detail panel with match score bar"
+```
+
+---
+
+## Task 10: Final Integration Test + Polish
+
+**Files:**
+- Modify: `tennis-recommender.html`
+
+- [ ] **Step 1: Run the full happy path twice**
+
+Test run 1 — Forehand + Serve focus:
+1. Select "Forehand" and "Serve" categories
+2. Complete all 6 questions
+3. Verify calendar appears with tournaments in correct months
+4. Verify Wimbledon and Australian Open appear near the top (high serve/forehand vibes)
+5. Click Wimbledon card — verify panel shows grass, London, notables
+6. Close panel, click "Start Over" — verify returns to category picker cleanly
+
+Test run 2 — Humor + Style focus:
+1. Select "Humor & Personality" and "Personal Style"
+2. Complete all 6 questions choosing flamboyant players (Tiafoe, Jabeur, Gauff)
+3. Verify more glamour events (Acapulco, Madrid, Indian Wells) appear prominently
+4. Verify correct match score percentages shown
+
+- [ ] **Step 2: Fix any layout issues for narrow viewports**
+
+Add this CSS inside the `<style>` block after the `.calendar` rule:
+```css
+@media (max-width: 700px) {
+  .player-grid { grid-template-columns: 1fr 1fr; }
+  h1 { font-size: 32px; }
+  .hero { padding: var(--space-md) var(--space-sm); }
+}
+```
+
+- [ ] **Step 3: Remove self-test console log from production**
+
+Remove the `selfTest` IIFE block added in Task 5 (the `(function selfTest() { ... })();` block).
+
+- [ ] **Step 4: Final commit**
+
+```bash
+git add tennis-recommender.html
+git commit -m "feat: tennis tournament recommender — complete single-file app"
+```
+
+---
+
+## Spec Coverage Check
+
+| Spec requirement | Task |
+|---|---|
+| Single self-contained HTML file | Task 1 |
+| Wimbledon aesthetic (crimson, sage, cream, EB Garamond) | Task 1 |
+| Top 100 ATP + WTA player data with dimension scores | Task 2 |
+| 250-level and above tournaments only | Task 3 |
+| Tournament notables (regulars) | Task 3 |
+| 7 quiz categories, user picks 2–5 | Tasks 4, 6 |
+| 3 questions per category, 4 player options each | Task 4 |
+| Player cards with avatar + tour badge | Task 7 |
+| Progress bar | Task 7 |
+| Back/Next navigation | Task 7 |
+| Cosine similarity scoring | Task 5 |
+| Prestige bonus (+0.1 GS, +0.05 Masters) | Task 5 |
+| Calendar view (12 months, horizontal) | Task 8 |
+| Prestige colour coding | Task 8 |
+| Top 3 "Best Match" badge | Task 8 |
+| Tournament detail panel | Task 9 |
+| Match score bar in detail panel | Task 9 |
+| Start Over resets state | Task 8 |
